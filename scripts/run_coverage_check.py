@@ -27,6 +27,7 @@ from core.retrieval.source_matrix import (
     render_source_matrix_review,
     source_matrix_review,
 )
+from core.retrieval.wechat_provider_preflight import build_wechat_provider_preflight, write_wechat_provider_preflight
 from scripts._env_utils import load_env_file
 
 
@@ -73,10 +74,26 @@ def main() -> int:
     (output_dir / "config.json").write_text(json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8")
     purge_search_cache(output_dir)
     teams = enrich_teams_with_source_matrix(teams, matrix)
+    parsed_sources = parse_sources(args.sources)
+    if should_run_wechat_provider_preflight(parsed_sources, args.skip_wechat_provider_preflight):
+        provider_preflight = build_wechat_provider_preflight(
+            teams,
+            window,
+            accounts_path=args.wechat_accounts,
+            wewe_base=args.wewe_base,
+            timeout=args.wechat_provider_timeout,
+            dajiala_max_pages=args.dajiala_max_pages,
+        )
+        provider_paths = write_wechat_provider_preflight(provider_preflight, output_dir)
+        print(f"wechat_provider_preflight={provider_paths['md']}")
+        print(f"wechat_provider_preflight_json={provider_paths['json']}")
+        if args.strict_wechat_provider_preflight and provider_preflight["summary"]["team_not_ready"]:
+            print("wechat_provider_preflight=strict_failed")
+            return 2
 
     coverages: list[dict[str, Any]] = []
     for idx, team in enumerate(teams, start=1):
-        coverage = assess_team_coverage(team, window, scan_id, args.mode, sources=parse_sources(args.sources))
+        coverage = assess_team_coverage(team, window, scan_id, args.mode, sources=parsed_sources)
         write_team_cache(coverage, output_dir, idx)
         coverages.append(coverage)
 
@@ -114,6 +131,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--source-matrix", default="broker_wechat_matrix.md")
     parser.add_argument("--preflight-only", action="store_true", help="Only write source-list review; do not run retrieval.")
     parser.add_argument("--source-list-confirmed", action="store_true", help="Confirm analyst/source list review before retrieval.")
+    parser.add_argument("--skip-wechat-provider-preflight", action="store_true", help="Skip dajiala/wewe provider checks before retrieval.")
+    parser.add_argument("--strict-wechat-provider-preflight", action="store_true", help="Fail before retrieval if any official account has no dajiala/wewe window articles.")
+    parser.add_argument("--wechat-accounts", help="Path to ir_search accounts.json for dajiala/wewe preflight.")
+    parser.add_argument("--wewe-base", help="Override WEWE_RSS_BASE for provider preflight.")
+    parser.add_argument("--wechat-provider-timeout", type=int, default=8)
+    parser.add_argument("--dajiala-max-pages", type=int, default=1)
     return parser.parse_args()
 
 
@@ -121,6 +144,13 @@ def parse_sources(value: str | None) -> list[str] | None:
     if not value:
         return None
     return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def should_run_wechat_provider_preflight(sources: list[str] | None, skip: bool) -> bool:
+    if skip:
+        return False
+    selected = sources or ["manual_wechat", "wechat_opencli"]
+    return "wechat_opencli" in selected
 
 
 def purge_search_cache(output_dir: Path) -> None:
