@@ -5,6 +5,7 @@ from typing import Any
 
 DEFAULT_SOURCE_MATRIX = Path(__file__).resolve().parents[2] / "broker_wechat_matrix.md"
 EXTERNAL_SOURCE_MATRIX = Path("/Users/chen/Documents/ir_search/work/broker_wechat_matrix.md")
+OFFICIAL_SEARCH_INSTITUTIONS = {"中信", "中国银河"}
 
 
 def load_source_matrix(path: str | Path = DEFAULT_SOURCE_MATRIX) -> dict[str, Any]:
@@ -32,12 +33,16 @@ def parse_broker_wechat_matrix(text: str) -> list[dict[str, Any]]:
         official = split_accounts(row.get("官方公众号", ""))
         macro = split_accounts(row.get("宏观个人号/团队号", ""))
         strategy = split_accounts(row.get("策略个人号/团队号", ""))
+        macro_analysts = split_accounts(row.get("宏观分析师", ""))
+        strategy_analysts = split_accounts(row.get("策略分析师", ""))
         rows.append(
             {
                 "institution": institution,
                 "official_accounts": official,
                 "macro_accounts": macro,
                 "strategy_accounts": strategy,
+                "macro_analysts": macro_analysts,
+                "strategy_analysts": strategy_analysts,
                 "all_accounts": dedupe_accounts(official + macro + strategy),
             }
         )
@@ -56,10 +61,9 @@ def enrich_team_with_source_matrix(team: dict[str, Any], matrix: dict[str, Any])
         copied["source_matrix_institution"] = None
         return copied
 
-    role_accounts = entry["macro_accounts"] if team.get("role") == "macro" else entry["strategy_accounts"]
-    matrix_accounts = dedupe_accounts(entry["official_accounts"] + role_accounts)
+    matrix_accounts = matrix_search_accounts_for_role(entry, str(team.get("role") or ""))
     copied = dict(team)
-    copied["official_accounts"] = dedupe_accounts(matrix_accounts + list(team.get("official_accounts") or []))
+    copied["official_accounts"] = matrix_accounts
     copied["source_matrix_accounts"] = matrix_accounts
     copied["source_matrix_institution"] = entry["institution"]
     return copied
@@ -83,6 +87,9 @@ def source_matrix_review(teams: list[dict[str, Any]], matrix: dict[str, Any]) ->
         if entry:
             official_accounts = list(entry.get("official_accounts") or [])
             role_accounts = list(entry.get("macro_accounts") or []) if team.get("role") == "macro" else list(entry.get("strategy_accounts") or [])
+            search_accounts = matrix_search_accounts_for_role(entry, str(team.get("role") or ""))
+        else:
+            search_accounts = dedupe_accounts(list(team.get("official_accounts") or []))
         rows.append(
             {
                 "analyst_id": team.get("analyst_id"),
@@ -91,7 +98,7 @@ def source_matrix_review(teams: list[dict[str, Any]], matrix: dict[str, Any]) ->
                 "matrix_institution": entry.get("institution") if entry else "",
                 "official_accounts": official_accounts,
                 "role_accounts": role_accounts,
-                "search_accounts": dedupe_accounts(official_accounts + role_accounts + list(team.get("official_accounts") or [])),
+                "search_accounts": search_accounts,
                 "matrix_match": bool(entry),
             }
         )
@@ -138,6 +145,15 @@ def render_source_matrix_review(review: dict[str, Any]) -> str:
 def split_accounts(value: str) -> list[str]:
     text = value.replace("<br>", "；").replace(",", "；").replace("，", "；").replace("、", "；")
     return [item.strip() for item in text.split("；") if item.strip()]
+
+
+def matrix_search_accounts_for_role(entry: dict[str, Any], role: str) -> list[str]:
+    role_accounts = entry["macro_accounts"] if role == "macro" else entry["strategy_accounts"]
+    if role_accounts:
+        return dedupe_accounts(role_accounts)
+    if normalize_institution(str(entry.get("institution") or "")) in OFFICIAL_SEARCH_INSTITUTIONS:
+        return dedupe_accounts(list(entry.get("official_accounts") or []))
+    return []
 
 
 def dedupe_accounts(values: list[str]) -> list[str]:
