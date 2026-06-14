@@ -1,0 +1,110 @@
+official_accounts:
+  广发证券:macro:
+    institution: 广发证券
+    role: macro
+    team_members:
+      - 郭磊
+    accounts:
+      - 郭磊宏观茶座
+      - 广发证券研究
+    allowed_domains:
+      - mp.weixin.qq.com
+
+  华创证券:macro:
+    institution: 华创证券
+    role: macro
+    team_members:
+      - 张瑜
+    accounts:
+      - 一瑜中的
+      - 华创证券研究所
+    allowed_domains:
+      - mp.weixin.qq.com
+
+  国金证券:strategy:
+    institution: 国金证券
+    role: strategy
+    team_members:
+      - 牟一凌
+    accounts:
+      - 一凌策略研究
+    allowed_domains:
+      - mp.weixin.qq.com
+
+  兴业证券:macro:
+    institution: 兴业证券
+    role: macro
+    team_members:
+      - 王涵
+      - 段超
+    accounts:
+      - 兴证宏观
+      - 王涵论宏观
+      - 段超宏观研究
+    allowed_domains:
+      - mp.weixin.qq.com
+
+  中信建投:macro:
+    institution: 中信建投
+    role: macro
+    team_members:
+      - 周君芝
+    accounts:
+      - CSC研究 宏观团队
+      - 宏观芝道
+    allowed_domains:
+      - mp.weixin.qq.com
+
+  中金公司:macro:
+    institution: 中金公司
+    role: macro
+    team_members:
+      - 张文朗
+      - 彭文生
+    accounts:
+      - 中金宏观
+      - 彭文生观点
+    allowed_domains:
+      - mp.weixin.qq.com
+
+  国泰海通:macro:
+    institution: 国泰海通
+    role: macro
+    team_members:
+      - 汪浩
+    accounts:
+      - 国泰海通证券研究
+    allowed_domains:
+      - mp.weixin.qq.com
+
+  申万宏源:macro:
+    institution: 申万宏源
+    role: macro
+    team_members:
+      - 赵伟
+      - 陈达飞
+    accounts:
+      - 申万宏源宏观
+      - 申万宏源研究
+    allowed_domains:
+      - mp.weixin.qq.com
+
+  招商证券:macro:
+    institution: 招商证券
+    role: macro
+    team_members:
+      - 张静静
+    accounts:
+      - 静观金融
+    allowed_domains:
+      - mp.weixin.qq.com
+
+  中国银河:macro:
+    institution: 中国银河
+    role: macro
+    team_members:
+      - 章俊
+    accounts:
+      - 中国银河证券研究
+    allowed_domains:
+      - mp.weixin.qq.com

@@ -1,0 +1,235 @@
+{
+  "total_teams": 10,
+  "needs_review_count": 0,
+  "confirmation_required": true,
+  "instruction": "请确认 analyst/source whitelist 后，再运行检索命令并显式传入 --source-list-confirmed。",
+  "teams": [
+    {
+      "analyst_id": "广发证券:macro",
+      "institution": "广发证券",
+      "role": "macro",
+      "team_members": [
+        "郭磊"
+      ],
+      "current_official_accounts": [
+        "郭磊宏观茶座",
+        "广发证券研究"
+      ],
+      "whitelist_accounts": [
+        "郭磊宏观茶座",
+        "广发证券研究"
+      ],
+      "allowed_domains": [
+        "mp.weixin.qq.com"
+      ],
+      "missing_from_whitelist": [],
+      "extra_in_whitelist": [],
+      "needs_review": false,
+      "recommended_action": "无需修改"
+    },
+    {
+      "analyst_id": "华创证券:macro",
+      "institution": "华创证券",
+      "role": "macro",
+      "team_members": [
+        "张瑜"
+      ],
+      "current_official_accounts": [
+        "一瑜中的",
+        "华创证券研究所"
+      ],
+      "whitelist_accounts": [
+        "一瑜中的",
+        "华创证券研究所"
+      ],
+      "allowed_domains": [
+        "mp.weixin.qq.com"
+      ],
+      "missing_from_whitelist": [],
+      "extra_in_whitelist": [],
+      "needs_review": false,
+      "recommended_action": "无需修改"
+    },
+    {
+      "analyst_id": "国金证券:strategy",
+      "institution": "国金证券",
+      "role": "strategy",
+      "team_members": [
+        "牟一凌"
+      ],
+      "current_official_accounts": [
+        "一凌策略研究"
+      ],
+      "whitelist_accounts": [
+        "一凌策略研究"
+      ],
+      "allowed_domains": [
+        "mp.weixin.qq.com"
+      ],
+      "missing_from_whitelist": [],
+      "extra_in_whitelist": [],
+      "needs_review": false,
+      "recommended_action": "无需修改"
+    },
+    {
+      "analyst_id": "兴业证券:macro",
+      "institution": "兴业证券",
+      "role": "macro",
+      "team_members": [
+        "王涵",
+        "段超"
+      ],
+      "current_official_accounts": [
+        "兴证宏观",
+        "王涵论宏观",
+        "段超宏观研究"
+      ],
+      "whitelist_accounts": [
+        "兴证宏观",
+        "王涵论宏观",
+        "段超宏观研究"
+      ],
+      "allowed_domains": [
+        "mp.weixin.qq.com"
+      ],
+      "missing_from_whitelist": [],
+      "extra_in_whitelist": [],
+      "needs_review": false,
+      "recommended_action": "无需修改"
+    },
+    {
+      "analyst_id": "中信建投:macro",
+      "institution": "中信建投",
+      "role": "macro",
+      "team_members": [
+        "周君芝"
+      ],
+      "current_official_accounts": [
+        "CSC研究 宏观团队",
+        "宏观芝道"
+      ],
+      "whitelist_accounts": [
+        "CSC研究 宏观团队",
+        "宏观芝道"
+      ],
+      "allowed_domains": [
+        "mp.weixin.qq.com"
+      ],
+      "missing_from_whitelist": [],
+      "extra_in_whitelist": [],
+      "needs_review": false,
+      "recommended_action": "无需修改"
+    },
+    {
+      "analyst_id": "中金公司:macro",
+      "institution": "中金公司",
+      "role": "macro",
+      "team_members": [
+        "张文朗",
+        "彭文生"
+      ],
+      "current_official_accounts": [
+        "中金宏观",
+        "彭文生观点"
+      ],
+      "whitelist_accounts": [
+        "中金宏观",
+        "彭文生观点"
+      ],
+      "allowed_domains": [
+        "mp.weixin.qq.com"
+      ],
+      "missing_from_whitelist": [],
+      "extra_in_whitelist": [],
+      "needs_review": false,
+      "recommended_action": "无需修改"
+    },
+    {
+      "analyst_id": "国泰海通:macro",
+      "institution": "国泰海通",
+      "role": "macro",
+      "team_members": [
+        "汪浩"
+      ],
+      "current_official_accounts": [
+        "国泰海通证券研究"
+      ],
+      "whitelist_accounts": [
+        "国泰海通证券研究"
+      ],
+      "allowed_domains": [
+        "mp.weixin.qq.com"
+      ],
+      "missing_from_whitelist": [],
+      "extra_in_whitelist": [],
+      "needs_review": false,
+      "recommended_action": "无需修改"
+    },
+    {
+      "analyst_id": "申万宏源:macro",
+      "institution": "申万宏源",
+      "role": "macro",
+      "team_members": [
+        "赵伟",
+        "陈达飞"
+      ],
+      "current_official_accounts": [
+        "申万宏源宏观",
+        "申万宏源研究"
+      ],
+      "whitelist_accounts": [
+        "申万宏源宏观",
+        "申万宏源研究"
+      ],
+      "allowed_domains": [
+        "mp.weixin.qq.com"
+      ],
+      "missing_from_whitelist": [],
+      "extra_in_whitelist": [],
+      "needs_review": false,
+      "recommended_action": "无需修改"
+    },
+    {
+      "analyst_id": "招商证券:macro",
+      "institution": "招商证券",
+      "role": "macro",
+      "team_members": [
+        "张静静"
+      ],
+      "current_official_accounts": [
+        "静观金融"
+      ],
+      "whitelist_accounts": [
+        "静观金融"
+      ],
+      "allowed_domains": [
+        "mp.weixin.qq.com"
+      ],
+      "missing_from_whitelist": [],
+      "extra_in_whitelist": [],
+      "needs_review": false,
+      "recommended_action": "无需修改"
+    },
+    {
+      "analyst_id": "中国银河:macro",
+      "institution": "中国银河",
+      "role": "macro",
+      "team_members": [
+        "章俊"
+      ],
+      "current_official_accounts": [
+        "中国银河证券研究"
+      ],
+      "whitelist_accounts": [
+        "中国银河证券研究"
+      ],
+      "allowed_domains": [
+        "mp.weixin.qq.com"
+      ],
+      "missing_from_whitelist": [],
+      "extra_in_whitelist": [],
+      "needs_review": false,
+      "recommended_action": "无需修改"
+    }
+  ]
+}

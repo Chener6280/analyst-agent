@@ -1,0 +1,48 @@
+market_view:
+  name: 市场整体观点
+  type: ordinal
+  axis: 看多为正
+  values:
+    -2: 明显看空
+    -1: 谨慎偏空
+    0: 中性
+    1: 谨慎偏多
+    2: 明显看多
+
+sector:
+  name: 板块配置
+  type: categorical
+  axis: 推荐配置方向
+  selection_schema:
+    tag: string
+    tag_canonical_id: string|null
+    lean: -1|0|1
+
+style:
+  name: 风格判断
+  type: categorical
+  axis: 推荐风格方向
+  selection_schema:
+    tag: string
+    tag_canonical_id: string|null
+    lean: -1|0|1
+
+theme:
+  name: 主题机会
+  type: categorical
+  axis: 推荐主题方向
+  selection_schema:
+    tag: string
+    tag_canonical_id: string|null
+    lean: -1|0|1
+
+liquidity:
+  name: 流动性
+  type: ordinal
+  axis: 流动性改善为正
+  values:
+    -2: 明显恶化
+    -1: 边际恶化
+    0: 中性
+    1: 边际改善
+    2: 明显改善

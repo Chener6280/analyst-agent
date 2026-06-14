@@ -1,0 +1,54 @@
+growth:
+  name: 增长
+  type: ordinal
+  axis: 增长改善为正
+  values:
+    -2: 明显走弱
+    -1: 边际走弱
+    0: 中性
+    1: 边际改善
+    2: 明显改善
+
+inflation:
+  name: 通胀
+  type: ordinal
+  axis: 通胀上行为正
+  values:
+    -2: 明显下行
+    -1: 边际下行
+    0: 中性
+    1: 边际上行
+    2: 明显上行
+
+monetary:
+  name: 货币政策
+  type: ordinal
+  axis: 宽松为正
+  values:
+    -2: 明显收紧
+    -1: 边际收紧
+    0: 中性
+    1: 边际宽松
+    2: 明显宽松
+
+fiscal:
+  name: 财政政策
+  type: ordinal
+  axis: 扩张为正
+  values:
+    -2: 明显收缩
+    -1: 边际收缩
+    0: 中性
+    1: 边际扩张
+    2: 明显扩张
+
+overseas:
+  name: 海外环境
+  type: ordinal
+  axis: 外部环境改善为正
+  values:
+    -2: 明显恶化
+    -1: 边际恶化
+    0: 中性
+    1: 边际改善
+    2: 明显改善

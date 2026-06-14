@@ -1,0 +1,9 @@
+[project]
+name = "macro-strategy-analyst"
+version = "0.1.0"
+description = "MVP pipeline for analyst-view retrieval coverage checks."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
