@@ -103,6 +103,13 @@ python3 scripts/check_extract_accuracy.py \
 The seed gold rows only verify the harness. Production-quality accuracy checks
 require human-labeled gold rows authored outside the model.
 
+Candidate article metadata can be staged separately before human labels are
+confirmed. For example, `docs/gold_candidate_articles_2026w24.md` and
+`tests/gold/extraction_gold_candidates_2026w24.jsonl` record public metadata for
+the first five user-confirmed articles. Candidate rows intentionally use
+`expected_template`, not `expected`, so they are not counted by the accuracy
+gate until a human promotes them into the active gold file.
+
 ## SQLite And Cross Section
 
 After Phase 2 extraction passes, ingest the stance JSON into SQLite:
