@@ -44,15 +44,17 @@ def build_readiness(scan_dir: Path, diagnostics_dir: Path) -> dict[str, Any]:
     validation = read_validation_json(diagnostics_dir, coverage_scan_id)
 
     failed_reasons: list[str] = []
+    summary = coverage.get("summary", {})
+    eligible = eligible_samples(coverage)
+    validation_required = any(sample.get("source") == "manual_wechat" for sample in eligible)
     validation_passed = bool(validation.get("passed"))
-    if not validation_passed:
+    if validation_required and not validation_passed:
         failed_reasons.append("manual_wechat real sample validation has not passed")
     validation_window = validation.get("window") or {}
     coverage_window = first_team_window(coverage)
-    if validation_window and coverage_window and not same_window(validation_window, coverage_window):
+    if validation_required and validation_window and coverage_window and not same_window(validation_window, coverage_window):
         failed_reasons.append("manual_wechat validation window does not match coverage window")
 
-    summary = coverage.get("summary", {})
     phase1_gate = summary.get("phase1_gate", {})
     required_gates = [
         "covered_plus_partial_ge_60",
@@ -64,9 +66,8 @@ def build_readiness(scan_dir: Path, diagnostics_dir: Path) -> dict[str, Any]:
         if phase1_gate.get(gate) is not True:
             failed_reasons.append(f"coverage gate failed: {gate}")
 
-    eligible = eligible_samples(coverage)
     if len(eligible) < 1:
-        failed_reasons.append("no eligible manual_wechat samples for Phase 2")
+        failed_reasons.append("no eligible live/manual WeChat samples for Phase 2")
 
     ready = not failed_reasons
     return {
@@ -74,6 +75,7 @@ def build_readiness(scan_dir: Path, diagnostics_dir: Path) -> dict[str, Any]:
         "scan_id": coverage_scan_id,
         "failed_reasons": failed_reasons,
         "validation": {
+            "required": validation_required,
             "passed": validation_passed,
             "file_count": validation.get("file_count"),
             "template_count": validation.get("template_count"),
@@ -164,6 +166,7 @@ def render_markdown(result: dict[str, Any]) -> str:
             "",
             "| metric | value |",
             "|---|---:|",
+            f"| required | {'yes' if validation.get('required') else 'no'} |",
             f"| passed | {'yes' if validation.get('passed') else 'no'} |",
             f"| file_count | {validation.get('file_count')} |",
             f"| template_count | {validation.get('template_count')} |",

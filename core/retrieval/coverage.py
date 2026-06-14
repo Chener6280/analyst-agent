@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import json
 from datetime import date, datetime
 from pathlib import Path
@@ -234,11 +235,45 @@ def write_team_cache(item: dict[str, Any], output_dir: str | Path, index: int) -
     md_path = cache_dir / f"{stem}.md"
 
     for source in item["sources"]:
-        if source.get("content_path") is None and md_path.name:
-            source["content_path"] = f"search_cache/{md_path.name}"
+        content = source.pop("content", None)
+        if content and source.get("content_path") is None:
+            source["content_path"] = str(_write_article_cache(source, item, cache_dir, str(content)))
+        elif source.get("content_path") is None and md_path.name:
+            source["content_path"] = str(md_path)
 
     json_path.write_text(json.dumps(item, ensure_ascii=False, indent=2), encoding="utf-8")
     md_path.write_text(_team_markdown(item), encoding="utf-8")
+
+
+def _write_article_cache(source: dict[str, Any], team: dict[str, Any], cache_dir: Path, content: str) -> Path:
+    article_dir = cache_dir / "articles"
+    article_dir.mkdir(parents=True, exist_ok=True)
+    source_id = str(source.get("id") or "source")
+    title = str(source.get("title") or source_id)
+    safe_title = re.sub(r"[^0-9A-Za-z\u4e00-\u9fff._-]+", "_", title).strip("_")[:80] or source_id
+    path = article_dir / f"{source_id}_{safe_title}.md"
+    body = content.strip()
+    account_name = str(source.get("account_name") or source.get("source_account") or "")
+    lines = [
+        "---",
+        f'title: "{_escape_yaml(str(source.get("title") or ""))}"',
+        f'url: "{_escape_yaml(str(source.get("url") or ""))}"',
+        f'published_at: "{_escape_yaml(str(source.get("published_at") or ""))}"',
+        f'account_name: "{_escape_yaml(account_name)}"',
+        f'institution: "{_escape_yaml(str(team.get("institution") or ""))}"',
+        f'role: "{_escape_yaml(str(team.get("role") or ""))}"',
+        f'analyst_id: "{_escape_yaml(str(team.get("analyst_id") or ""))}"',
+        "team_members:",
+    ]
+    for member in team.get("team_members") or []:
+        lines.append(f'  - "{_escape_yaml(str(member))}"')
+    lines.extend(["---", "", body, ""])
+    path.write_text("\n".join(lines), encoding="utf-8")
+    return path
+
+
+def _escape_yaml(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
 
 
 def _candidate_sources(
@@ -267,15 +302,17 @@ def _candidate_sources(
                 "evidence_type": hit.get("evidence_type") or (hit.get("extra", {}) or {}).get("evidence_type"),
                 "matched_entities": hit.get("matched_entities") or (hit.get("extra", {}) or {}).get("matched_entities", []),
                 "found_by": hit.get("found_by") or (hit.get("extra", {}) or {}).get("found_by", []),
-                "source_completeness": (hit.get("extra", {}) or {}).get("source_completeness"),
+                "source_completeness": (hit.get("extra", {}) or {}).get("source_completeness") or infer_source_completeness(_hit_content(hit)),
                 "source_origin": (hit.get("extra", {}) or {}).get("source_origin"),
                 "official_account_match": (hit.get("extra", {}) or {}).get("official_account_match"),
+                "account_name": (hit.get("extra", {}) or {}).get("account_name"),
                 "published_at": _date_only(hit.get("published_at")),
                 "adapter_mode": hit.get("adapter_mode") or hit.get("extra", {}).get("adapter_mode", "unknown"),
                 "text_access": text_access,
                 "attribution_confidence": attribution,
                 "is_attributed": attribution in {"high", "med", "low"},
                 "snippet": hit.get("snippet", ""),
+                "content": _hit_content(hit),
                 "content_path": hit.get("extra", {}).get("content_path"),
                 "fallback_from": hit.get("extra", {}).get("fallback_from"),
                 "candidate_type": candidate_type,
@@ -300,6 +337,17 @@ def classify_text_access(hit: dict[str, Any]) -> str:
     if hit.get("title") or hit.get("url"):
         return "metadata_only"
     return "failed"
+
+
+def _hit_content(hit: dict[str, Any]) -> str:
+    extra = hit.get("extra", {}) or {}
+    return str(extra.get("content") or extra.get("text") or extra.get("raw_content") or "")
+
+
+def infer_source_completeness(content: str) -> str | None:
+    if not content:
+        return None
+    return "full_article" if len(content) >= 1200 else "excerpt"
 
 
 def classify_attribution(team: dict[str, Any], hit: dict[str, Any]) -> str:

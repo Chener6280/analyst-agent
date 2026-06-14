@@ -43,6 +43,32 @@ export IR_SEARCH_LIVE=1
 `mock` and `placeholder` adapter results are never counted as formal coverage.
 They remain visible in diagnostics so source quality can be inspected directly.
 
+## Production Smoke Run
+
+The first live production smoke list is
+`data/analyst-list-production-sample.md`. It contains the five user-confirmed
+WeChat accounts from the 2026-06-14 screenshot batch. Use the live retrieval
+profile for ir_search/opencli runs:
+
+```bash
+python3 scripts/run_mvp_pipeline.py \
+  --retrieval-profile live \
+  --start 2026-06-08 \
+  --end 2026-06-14 \
+  --run-version prod-pipeline \
+  --max-teams 5 \
+  --analyst-list data/analyst-list-production-sample.md \
+  --sources wechat_opencli,bocha,exa,web_search \
+  --env-file /Users/chen/Documents/ir_search/ir_search.env \
+  --source-matrix broker_wechat_matrix.md \
+  --min-teams 5 \
+  --min-extracted 5 \
+  --quality-profile production
+```
+
+See `docs/production_smoke_2026w24.md` for the latest live smoke-run result and
+remaining source-health blockers.
+
 ## Manual WeChat Input
 
 Until automated WeChat collection is available, local Markdown articles can be

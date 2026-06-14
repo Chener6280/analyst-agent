@@ -11,8 +11,6 @@ def main() -> int:
     args = parse_args()
     repo_root = Path(__file__).resolve().parents[1]
     steps = build_steps(args)
-    if args.env_file:
-        steps[0].extend(["--env-file", args.env_file])
 
     failed_steps: list[tuple[list[str], int]] = []
     for step in steps:
@@ -45,29 +43,9 @@ def build_steps(args: argparse.Namespace) -> list[list[str]]:
     output_root = str(Path(args.output_root).expanduser())
     scan_dir = str(Path(output_root) / "scans" / scan_id)
     diagnostics_dir = str(Path(output_root) / "diagnostics")
+    phase1_steps = build_phase1_steps(args, output_root, scan_dir, diagnostics_dir)
     return [
-        [
-            sys.executable,
-            "scripts/run_phase1_manual_check.py",
-            "--start",
-            args.start,
-            "--end",
-            args.end,
-            "--max-teams",
-            str(args.max_teams),
-            "--analyst-list",
-            args.analyst_list,
-            "--run-version",
-            args.run_version,
-            "--articles-root",
-            args.articles_root,
-            "--output-root",
-            output_root,
-            "--source-whitelist",
-            args.source_whitelist,
-            "--source-matrix",
-            args.source_matrix,
-        ],
+        *phase1_steps,
         [sys.executable, "scripts/run_extract_mvp.py", "--scan-id", scan_id, "--output-root", output_root],
         [
             sys.executable,
@@ -164,6 +142,8 @@ def build_steps(args: argparse.Namespace) -> list[list[str]]:
             output_root,
             "--db-path",
             args.db_path,
+            "--quality-profile",
+            args.quality_profile,
         ],
         [
             sys.executable,
@@ -178,6 +158,74 @@ def build_steps(args: argparse.Namespace) -> list[list[str]]:
     ]
 
 
+def build_phase1_steps(args: argparse.Namespace, output_root: str, scan_dir: str, diagnostics_dir: str) -> list[list[str]]:
+    if args.retrieval_profile == "manual":
+        step = [
+            sys.executable,
+            "scripts/run_phase1_manual_check.py",
+            "--start",
+            args.start,
+            "--end",
+            args.end,
+            "--max-teams",
+            str(args.max_teams),
+            "--analyst-list",
+            args.analyst_list,
+            "--run-version",
+            args.run_version,
+            "--articles-root",
+            args.articles_root,
+            "--output-root",
+            output_root,
+            "--source-whitelist",
+            args.source_whitelist,
+            "--source-matrix",
+            args.source_matrix,
+        ]
+        if args.env_file:
+            step.extend(["--env-file", args.env_file])
+        return [step]
+
+    coverage_step = [
+        sys.executable,
+        "scripts/run_coverage_check.py",
+        "--mode",
+        "manual",
+        "--start",
+        args.start,
+        "--end",
+        args.end,
+        "--max-teams",
+        str(args.max_teams),
+        "--analyst-list",
+        args.analyst_list,
+        "--run-version",
+        args.run_version,
+        "--sources",
+        args.sources,
+        "--output-root",
+        output_root,
+        "--source-list-confirmed",
+        "--source-whitelist",
+        args.source_whitelist,
+        "--source-matrix",
+        args.source_matrix,
+    ]
+    if args.env_file:
+        coverage_step.extend(["--env-file", args.env_file])
+    return [
+        coverage_step,
+        [
+            sys.executable,
+            "scripts/check_phase2_readiness.py",
+            "--scan-dir",
+            scan_dir,
+            "--diagnostics-dir",
+            diagnostics_dir,
+        ],
+    ]
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run Phase 1-8 MVP pipeline with gates.")
     parser.add_argument("--start", default="2026-06-01")
@@ -185,8 +233,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--run-version", default="v1")
     parser.add_argument("--max-teams", type=int, default=3)
     parser.add_argument("--analyst-list", default="data/analyst-list.md")
+    parser.add_argument("--retrieval-profile", choices=["manual", "live"], default="manual")
+    parser.add_argument("--sources", default="manual_wechat,wechat_opencli,bocha,exa,web_search")
     parser.add_argument("--min-teams", type=int, default=10)
     parser.add_argument("--min-extracted", type=int, default=5)
+    parser.add_argument("--quality-profile", choices=["sample", "production"], default="sample")
     parser.add_argument("--env-file")
     parser.add_argument("--articles-root", default="~/macro-strategy/manual_wechat_articles")
     parser.add_argument("--output-root", default="~/macro-strategy")

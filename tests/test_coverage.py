@@ -7,7 +7,9 @@ from core.retrieval.coverage import (
     classify_text_access,
     summarize_coverages,
     write_coverage_report,
+    write_team_cache,
 )
+from core.retrieval.manual_wechat import parse_manual_wechat_article
 import core.retrieval.coverage as coverage_module
 from scripts.run_coverage_check import purge_search_cache
 
@@ -220,3 +222,35 @@ def test_purge_search_cache_removes_generated_cache_files(tmp_path) -> None:
     assert not (cache_dir / "old.json").exists()
     assert not (cache_dir / "old.md").exists()
     assert keep.exists()
+
+
+def test_write_team_cache_materializes_live_content_for_extraction(tmp_path) -> None:
+    item = {
+        "analyst_id": "广发证券:macro",
+        "institution": "广发证券",
+        "role": "macro",
+        "team_members": ["郭磊"],
+        "sources": [
+            {
+                "id": "s1",
+                "title": "【广发宏观团队】测试",
+                "url": "https://mp.weixin.qq.com/s/test",
+                "source": "wechat_opencli",
+                "source_type": "official_wechat",
+                "published_at": "2026-06-14",
+                "account_name": "郭磊宏观茶座",
+                "text_access": "full_text",
+                "attribution_confidence": "high",
+                "content": "增长边际改善。" * 500,
+            }
+        ],
+        "raw_hits": {"primary": [], "fallback": []},
+    }
+
+    write_team_cache(item, tmp_path, 1)
+
+    source = item["sources"][0]
+    assert "content" not in source
+    article = parse_manual_wechat_article(source["content_path"])
+    assert article["metadata"]["account_name"] == "郭磊宏观茶座"
+    assert "增长边际改善" in article["body"]

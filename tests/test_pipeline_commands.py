@@ -56,8 +56,11 @@ def test_pipeline_steps_use_requested_scan_output_and_db_paths(tmp_path: Path) -
         run_version="v2",
         max_teams=10,
         analyst_list="data/analyst-list-acceptance-candidates.md",
+        retrieval_profile="manual",
+        sources="manual_wechat,wechat_opencli,bocha,exa,web_search",
         min_teams=10,
         min_extracted=5,
+        quality_profile="sample",
         env_file=None,
         articles_root=str(tmp_path / "articles"),
         output_root=str(tmp_path / "out"),
@@ -82,6 +85,38 @@ def test_pipeline_steps_use_requested_scan_output_and_db_paths(tmp_path: Path) -
     assert any("scripts/export_visual_pack.py" in step and str(tmp_path / "views.db") in step for step in flattened)
     assert any("scripts/export_project_package.py" in step and str(tmp_path / "views.db") in step for step in flattened)
     assert any("scripts/check_mvp_acceptance.py" in step and str(tmp_path / "views.db") in step for step in flattened)
+    assert any("scripts/check_mvp_acceptance.py" in step and "--quality-profile sample" in step for step in flattened)
     acceptance_idx = next(idx for idx, step in enumerate(flattened) if "scripts/check_mvp_acceptance.py" in step)
     package_idx = next(idx for idx, step in enumerate(flattened) if "scripts/export_project_package.py" in step)
     assert acceptance_idx < package_idx
+
+
+def test_live_pipeline_uses_coverage_and_phase2_readiness_without_manual_validation(tmp_path: Path) -> None:
+    args = argparse.Namespace(
+        start="2026-06-08",
+        end="2026-06-14",
+        run_version="live",
+        max_teams=5,
+        analyst_list="data/analyst-list-production-sample.md",
+        retrieval_profile="live",
+        sources="wechat_opencli,bocha",
+        min_teams=5,
+        min_extracted=5,
+        quality_profile="production",
+        env_file="/tmp/ir_search.env",
+        articles_root=str(tmp_path / "articles"),
+        output_root=str(tmp_path / "out"),
+        db_path=str(tmp_path / "views.db"),
+        source_whitelist="data/source_whitelist.yaml",
+        source_matrix="broker_wechat_matrix.md",
+    )
+
+    steps = build_steps(args)
+    flattened = [" ".join(step) for step in steps]
+
+    assert "scripts/run_phase1_manual_check.py" not in flattened[0]
+    assert "scripts/run_coverage_check.py" in flattened[0]
+    assert "--source-list-confirmed" in flattened[0]
+    assert "--env-file /tmp/ir_search.env" in flattened[0]
+    assert "scripts/check_phase2_readiness.py" in flattened[1]
+    assert any("scripts/check_mvp_acceptance.py" in step and "--quality-profile production" in step for step in flattened)

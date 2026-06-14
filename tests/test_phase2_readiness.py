@@ -111,3 +111,48 @@ def test_phase2_readiness_prefers_scan_specific_validation(tmp_path: Path) -> No
 
     assert result["ready"] is True
     assert result["validation"]["window"] == correct
+
+
+def test_phase2_readiness_does_not_require_manual_validation_for_live_wechat(tmp_path: Path) -> None:
+    scan_dir = tmp_path / "scans" / "live-test"
+    diagnostics = tmp_path / "diagnostics"
+    scan_dir.mkdir(parents=True)
+    diagnostics.mkdir(parents=True)
+    window = {"start": "2026-06-08", "end": "2026-06-14", "iso_year": 2026, "iso_week": 24}
+    (scan_dir / "coverage_summary.json").write_text(
+        json.dumps(
+            {
+                "scan_id": "live-test",
+                "summary": {
+                    "phase1_gate": {
+                        "covered_plus_partial_ge_60": True,
+                        "full_or_partial_text_ge_40": True,
+                        "high_or_med_attribution_ge_70": True,
+                        "mock_or_placeholder_eq_0": True,
+                    }
+                },
+                "teams": [
+                    {
+                        "analyst_id": "国金证券:strategy",
+                        "coverage": "covered",
+                        "text_access": "full_text",
+                        "attribution_confidence": "high",
+                        "window": window,
+                        "sources": [
+                            {
+                                "source": "wechat_opencli",
+                                "adapter_mode": "live",
+                                "content_path": "/tmp/live.md",
+                            }
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = build_readiness(scan_dir, diagnostics)
+
+    assert result["ready"] is True
+    assert result["validation"]["required"] is False
