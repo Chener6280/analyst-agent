@@ -234,6 +234,8 @@ def main_causes(failed: list[dict[str, Any]]) -> list[str]:
         causes.append("P5 agent handoff generation is incomplete; rerun the handoff export step after weekly brief generation.")
     if "history_readiness.json" in names or "history readiness status" in names:
         causes.append("P6 history readiness generation is incomplete; rerun the history readiness step after handoff export.")
+    if "history readiness for trend" in names:
+        causes.append("Trend production readiness requires at least 4 real weekly scans; current single-scan runs remain valid for coverage/extraction but cannot prove time-series stability.")
     if "visual_pack.json" in names or "visual pack status" in names:
         causes.append("P7 visual pack generation is incomplete; rerun the visual export step after history readiness.")
     if "full_text_recovery_report.json" in names or "full-text recovery production flag" in names:

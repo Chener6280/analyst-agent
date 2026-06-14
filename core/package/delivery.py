@@ -53,18 +53,37 @@ def build_project_package(
 
 def read_inputs(scan_id: str, output_dir: Path, reports_dir: Path) -> dict[str, Any]:
     diagnostics_dir = output_dir / "diagnostics"
+    acceptance_paths = scan_acceptance_paths(diagnostics_dir, scan_id)
     return {
         "weekly_brief": read_json(reports_dir / "weekly_brief.json"),
         "agent_handoff": read_json(reports_dir / "agent_handoff.json"),
         "history_readiness": read_json(reports_dir / "history_readiness.json"),
         "visual_pack": read_json(reports_dir / "visual_pack.json"),
         "full_text_recovery": read_json(reports_dir / "full_text_recovery_report.json"),
-        "acceptance": read_scan_acceptance(diagnostics_dir, scan_id),
+        "acceptance": read_json(acceptance_paths["json"]),
+        "acceptance_paths": {key: str(path) for key, path in acceptance_paths.items()},
     }
 
 
 def read_scan_acceptance(diagnostics_dir: Path, scan_id: str) -> dict[str, Any]:
-    return read_json(diagnostics_dir / f"{scan_id}__mvp_acceptance.json")
+    return read_json(scan_acceptance_paths(diagnostics_dir, scan_id)["json"])
+
+
+def scan_acceptance_paths(diagnostics_dir: Path, scan_id: str) -> dict[str, Path]:
+    candidates = [
+        {
+            "json": diagnostics_dir / f"{scan_id}__mvp_acceptance_production.json",
+            "md": diagnostics_dir / f"{scan_id}__mvp_acceptance_production.md",
+        },
+        {
+            "json": diagnostics_dir / f"{scan_id}__mvp_acceptance.json",
+            "md": diagnostics_dir / f"{scan_id}__mvp_acceptance.md",
+        },
+    ]
+    for candidate in candidates:
+        if candidate["json"].exists() or candidate["md"].exists():
+            return candidate
+    return candidates[-1]
 
 
 def build_manifest(
@@ -89,7 +108,10 @@ def build_manifest(
         "history_readiness": str(reports_dir / "history_readiness.md"),
         "visual_pack": str(reports_dir / "visual_pack.md"),
         "full_text_recovery": str(reports_dir / "full_text_recovery_report.md"),
-        "mvp_acceptance": str(output_dir / "diagnostics" / f"{scan_id}__mvp_acceptance.md"),
+        "mvp_acceptance": (inputs.get("acceptance_paths") or {}).get(
+            "md",
+            str(output_dir / "diagnostics" / f"{scan_id}__mvp_acceptance.md"),
+        ),
         "mcp_server": str(repo_root / "mcp" / "analyst_views_server.py"),
         "pipeline_script": str(repo_root / "scripts" / "run_mvp_pipeline.py"),
     }
