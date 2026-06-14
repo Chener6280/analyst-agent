@@ -207,7 +207,7 @@ def coarse_freshness(window: dict[str, Any]) -> str:
         return "oneMonth"
     if span <= timedelta(days=366):
         return "oneYear"
-    return "all"
+    return "noLimit"
 
 
 def _dedupe_hits(hits: list[dict[str, Any]]) -> list[dict[str, Any]]:

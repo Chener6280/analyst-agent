@@ -42,3 +42,6 @@ def test_entity_linker_keeps_sample_terms_as_fallback(tmp_path: Path) -> None:
     linker = EntityLinker(ir_search_entities_dir=entities, pending_path=tmp_path / "pending.jsonl")
 
     assert linker.link("电子", "sector") == "INDUSTRY:电子"
+    assert linker.link("电子", "theme") is None
+    assert linker.link("宁德时代") == "300750.SZ"
+    assert linker.link("宁德时代") != "STOCK:300750"

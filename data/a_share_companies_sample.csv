@@ -1,5 +1,5 @@
-tag,canonical_id
-宁德时代,STOCK:300750
-贵州茅台,STOCK:600519
-中际旭创,STOCK:300308
-工业富联,STOCK:601138
+canonical_id,names,aliases,codes,market,related_terms
+300750.SZ,宁德时代,,300750|300750.SZ,A_SHARE,
+600519.SH,贵州茅台,,600519|600519.SH,A_SHARE,
+300308.SZ,中际旭创,,300308|300308.SZ,A_SHARE,
+601138.SH,工业富联,,601138|601138.SH,A_SHARE,

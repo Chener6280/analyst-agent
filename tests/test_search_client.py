@@ -53,3 +53,4 @@ def test_dedupe_hits_prefers_canonical_url() -> None:
 def test_coarse_freshness_tracks_manual_window_span() -> None:
     assert coarse_freshness({"start_at": "2026-06-01T00:00:00", "end_at": "2026-06-07T23:59:59"}) == "oneWeek"
     assert coarse_freshness({"start_at": "2026-06-01T00:00:00", "end_at": "2026-06-21T23:59:59"}) == "oneMonth"
+    assert coarse_freshness({"start_at": "2025-01-01T00:00:00", "end_at": "2026-06-21T23:59:59"}) == "noLimit"

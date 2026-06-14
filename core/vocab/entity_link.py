@@ -24,8 +24,8 @@ class EntityLinker:
     ) -> None:
         self.pending_path = Path(pending_path).expanduser()
         self.terms: dict[str, tuple[str, str | None]] = {}
-        self._load_legacy_terms(industry_terms_path, has_dim_hint=True)
-        self._load_legacy_terms(companies_path, has_dim_hint=False)
+        self._load_ir_search_entity_file(Path(industry_terms_path))
+        self._load_ir_search_entity_file(Path(companies_path))
         self._load_ir_search_entities(ir_search_entities_dir)
 
     def link(self, tag: str, dim_key: str | None = None) -> str | None:
@@ -40,18 +40,6 @@ class EntityLinker:
         self._append_pending(clean, dim_key)
         return None
 
-    def _load_legacy_terms(self, path: str | Path, *, has_dim_hint: bool) -> None:
-        source = Path(path)
-        if not source.exists():
-            return
-        with source.open(encoding="utf-8", newline="") as handle:
-            for row in csv.DictReader(handle):
-                tag = (row.get("tag") or "").strip()
-                canonical_id = (row.get("canonical_id") or "").strip()
-                if not tag or not canonical_id:
-                    continue
-                self.terms[tag] = (canonical_id, (row.get("dim_hint") or "").strip() or None if has_dim_hint else None)
-
     def _load_ir_search_entities(self, entities_dir: str | Path | None) -> None:
         root = resolve_ir_search_entities_dir(entities_dir)
         if not root:
@@ -62,6 +50,8 @@ class EntityLinker:
                 self._load_ir_search_entity_file(path)
 
     def _load_ir_search_entity_file(self, path: Path) -> None:
+        if not path.exists():
+            return
         with path.open(encoding="utf-8", newline="") as handle:
             for row in csv.DictReader(handle):
                 canonical_id = (row.get("canonical_id") or "").strip()
@@ -88,6 +78,11 @@ def resolve_ir_search_entities_dir(entities_dir: str | Path | None = None) -> Pa
     configured = os.environ.get("IR_SEARCH_ENTITIES_DIR")
     if configured:
         return Path(configured).expanduser()
+    search_path = os.environ.get("IR_SEARCH_PATH")
+    if search_path:
+        candidate = Path(search_path).expanduser() / "ir_search" / "entities"
+        if candidate.exists():
+            return candidate
     try:
         return Path(resources.files("ir_search") / "entities")
     except Exception:
@@ -117,7 +112,9 @@ def _dedupe(values: list[str]) -> list[str]:
 
 def _dim_hint_for_ir_search_row(row: dict[str, str]) -> str | None:
     market = (row.get("market") or "").strip()
-    canonical_id = (row.get("canonical_id") or "").strip()
-    if market == "INDUSTRY" or canonical_id.startswith("INDUSTRY:"):
-        return None
-    return None
+    return {
+        "INDUSTRY": "sector",
+        "STYLE": "style",
+        "INDEX": "style",
+        "THEME": "theme",
+    }.get(market)
