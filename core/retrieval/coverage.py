@@ -260,8 +260,13 @@ def _candidate_sources(
             {
                 "title": hit.get("title", ""),
                 "url": hit.get("url", ""),
+                "canonical_url": hit.get("canonical_url") or (hit.get("extra", {}) or {}).get("canonical_url"),
                 "source": hit.get("source", "unknown"),
                 "source_type": classify_source_type(team, hit),
+                "tier": hit.get("tier") or (hit.get("extra", {}) or {}).get("tier"),
+                "evidence_type": hit.get("evidence_type") or (hit.get("extra", {}) or {}).get("evidence_type"),
+                "matched_entities": hit.get("matched_entities") or (hit.get("extra", {}) or {}).get("matched_entities", []),
+                "found_by": hit.get("found_by") or (hit.get("extra", {}) or {}).get("found_by", []),
                 "source_completeness": (hit.get("extra", {}) or {}).get("source_completeness"),
                 "source_origin": (hit.get("extra", {}) or {}).get("source_origin"),
                 "official_account_match": (hit.get("extra", {}) or {}).get("official_account_match"),

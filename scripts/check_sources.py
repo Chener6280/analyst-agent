@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import shlex
@@ -17,8 +18,6 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts._env_utils import load_env_file
-
-IR_SEARCH_PATH = Path("/Users/chen/Documents/Codex/2026-06-08/files-mentioned-by-the-user-ir")
 
 
 def main() -> int:
@@ -82,7 +81,7 @@ def build_diagnostics(env_file: Path | None) -> dict[str, Any]:
         "ir_search": {
             "importable": backend is not None,
             "mcp_importable": check_mcp_importable(),
-            "path": str(IR_SEARCH_PATH) if IR_SEARCH_PATH.exists() else None,
+            "path": os.environ.get("IR_SEARCH_PATH"),
         },
         "sources": sources,
         "mock_or_placeholder_sources": [
@@ -92,8 +91,11 @@ def build_diagnostics(env_file: Path | None) -> dict[str, Any]:
 
 
 def load_ir_search() -> Any | None:
-    if IR_SEARCH_PATH.exists() and str(IR_SEARCH_PATH) not in sys.path:
-        sys.path.insert(0, str(IR_SEARCH_PATH))
+    configured = os.environ.get("IR_SEARCH_PATH")
+    if configured:
+        path = Path(configured).expanduser()
+        if path.exists() and str(path) not in sys.path:
+            sys.path.insert(0, str(path))
     try:
         import ir_search
 
@@ -103,14 +105,7 @@ def load_ir_search() -> Any | None:
 
 
 def check_mcp_importable() -> bool:
-    if IR_SEARCH_PATH.exists() and str(IR_SEARCH_PATH) not in sys.path:
-        sys.path.insert(0, str(IR_SEARCH_PATH))
-    try:
-        import ir_search.mcp_server  # noqa: F401
-
-        return True
-    except Exception:
-        return False
+    return importlib.util.find_spec("ir_search.mcp_server") is not None
 
 
 def check_opencli_command(command: str | None) -> dict[str, Any]:

@@ -91,6 +91,11 @@ def extract_team_stance(scan_id: str, team: dict[str, Any], *, model_version: st
                 "date": source.get("published_at") or article["metadata"].get("published_at"),
                 "source": source.get("source"),
                 "source_type": source.get("source_type"),
+                "canonical_url": source.get("canonical_url"),
+                "tier": source.get("tier"),
+                "evidence_type": source.get("evidence_type"),
+                "matched_entities": source.get("matched_entities", []),
+                "found_by": source.get("found_by", []),
                 "url": source.get("url") or article["metadata"].get("url"),
                 "adapter_mode": source.get("adapter_mode"),
             }

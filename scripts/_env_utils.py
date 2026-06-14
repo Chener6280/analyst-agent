@@ -5,7 +5,6 @@ from pathlib import Path
 
 DEFAULT_ENV_FILES = [
     Path("ir_search.env"),
-    Path("/Users/chen/Documents/Codex/2026-06-08/files-mentioned-by-the-user-ir/ir_search.env"),
 ]
 
 

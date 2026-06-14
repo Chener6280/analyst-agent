@@ -3,7 +3,7 @@ from __future__ import annotations
 import importlib
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -13,10 +13,6 @@ PRIMARY_SOURCES = ["manual_wechat", "wechat_opencli"]
 FALLBACK_SOURCES = ["bocha", "exa", "web_search"]
 
 _DEFAULT_IR_SEARCH_PATHS = [
-    Path("/Users/chen/Documents/ir_search"),
-    Path("../ir-search").resolve(),
-    Path("../files-mentioned-by-the-user-ir").resolve(),
-    Path("/Users/chen/Documents/Codex/2026-06-08/files-mentioned-by-the-user-ir"),
 ]
 
 
@@ -123,7 +119,11 @@ def _run_query(backend: Any, text: str, window: dict[str, Any], sources: list[st
             lang=Lang.ZH,
             sources=sources,
             count=8,
-            window=TimeWindow(raw="oneWeek", start=_parse_dt(window["start_at"]), end=_parse_dt(window["end_at"])),
+            window=TimeWindow(
+                raw=coarse_freshness(window),
+                start=_parse_dt(window["start_at"]),
+                end=_parse_dt(window["end_at"]),
+            ),
         )
         result = backend.search(query)
     except Exception as exc:
@@ -150,11 +150,26 @@ def _hit_to_dict(hit: Any) -> dict[str, Any]:
     extra = dict(getattr(hit, "extra", {}) or {})
     published_at = getattr(hit, "published_at", None)
     fetched_at = getattr(hit, "fetched_at", None)
+    canonical_url = getattr(hit, "canonical_url", "") or _canonicalize_url(getattr(hit, "url", "") or "")
+    tier = _enum_name(getattr(hit, "tier", None))
+    evidence_type = _enum_value(getattr(hit, "evidence_type", None))
+    matched_entities = list(getattr(hit, "matched_entities", []) or [])
+    found_by = list(getattr(hit, "found_by", []) or [])
+    extra.setdefault("canonical_url", canonical_url)
+    extra.setdefault("tier", tier)
+    extra.setdefault("evidence_type", evidence_type)
+    extra.setdefault("matched_entities", matched_entities)
+    extra.setdefault("found_by", found_by)
     return {
         "title": getattr(hit, "title", "") or "",
         "url": getattr(hit, "url", "") or "",
+        "canonical_url": canonical_url,
         "snippet": getattr(hit, "snippet", "") or "",
         "source": getattr(hit, "source", "") or "",
+        "tier": tier,
+        "evidence_type": evidence_type,
+        "matched_entities": matched_entities,
+        "found_by": found_by,
         "published_at": published_at.isoformat() if published_at else None,
         "fetched_at": fetched_at.isoformat() if fetched_at else None,
         "raw_score": getattr(hit, "raw_score", None),
@@ -180,16 +195,65 @@ def _parse_dt(value: str) -> datetime:
     return datetime.fromisoformat(value)
 
 
+def coarse_freshness(window: dict[str, Any]) -> str:
+    start = _parse_dt(window["start_at"])
+    end = _parse_dt(window["end_at"])
+    span = end - start
+    if span <= timedelta(days=1):
+        return "oneDay"
+    if span <= timedelta(days=7):
+        return "oneWeek"
+    if span <= timedelta(days=31):
+        return "oneMonth"
+    if span <= timedelta(days=366):
+        return "oneYear"
+    return "all"
+
+
 def _dedupe_hits(hits: list[dict[str, Any]]) -> list[dict[str, Any]]:
     seen: set[str] = set()
     unique: list[dict[str, Any]] = []
     for hit in hits:
-        key = hit.get("url") or f"{hit.get('source')}:{hit.get('title')}"
+        key = _hit_dedupe_key(hit)
         if key in seen:
             continue
         seen.add(key)
         unique.append(hit)
     return unique
+
+
+def _hit_dedupe_key(hit: dict[str, Any]) -> str:
+    extra = hit.get("extra", {}) or {}
+    canonical_url = hit.get("canonical_url") or extra.get("canonical_url")
+    if canonical_url:
+        return f"canonical:{canonical_url}"
+    url = hit.get("url") or ""
+    if url:
+        canonicalized = _canonicalize_url(url)
+        return f"url:{canonicalized or url}"
+    return f"title:{hit.get('source')}:{hit.get('title')}"
+
+
+def _canonicalize_url(url: str) -> str:
+    if not url:
+        return ""
+    try:
+        module = importlib.import_module("ir_search.urlnorm")
+        return str(module.canonicalize_url(url))
+    except Exception:
+        return url
+
+
+def _enum_name(value: Any) -> str | None:
+    if value is None:
+        return None
+    return getattr(value, "name", None) or str(value)
+
+
+def _enum_value(value: Any) -> str | None:
+    if value is None:
+        return None
+    return getattr(value, "value", None) or _enum_name(value)
 
 
 def _dedupe_diagnostics(diagnostics: list[dict[str, Any]]) -> list[dict[str, Any]]:

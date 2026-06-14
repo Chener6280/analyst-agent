@@ -20,7 +20,7 @@ MATRIX = """# matrix
 def test_default_source_matrix_lives_in_project_root() -> None:
     assert DEFAULT_SOURCE_MATRIX.name == "broker_wechat_matrix.md"
     assert DEFAULT_SOURCE_MATRIX.exists()
-    assert DEFAULT_SOURCE_MATRIX.parent.name == "macro-strategy-analyst"
+    assert (DEFAULT_SOURCE_MATRIX.parent / "pyproject.toml").exists()
 
 
 def test_parse_broker_wechat_matrix_splits_role_accounts() -> None:

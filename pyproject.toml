@@ -1,8 +1,11 @@
 [project]
-name = "macro-strategy-analyst"
+name = "analyst-agent"
 version = "0.1.0"
 description = "MVP pipeline for analyst-view retrieval coverage checks."
 requires-python = ">=3.11"
+dependencies = [
+  "ir-search @ git+https://github.com/Chener6280/ir-search@160d04ac39c71216fb3dd12c1e868db38f817886",
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
