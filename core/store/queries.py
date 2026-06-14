@@ -74,6 +74,7 @@ def who_mentioned_entity_history(
             """
             SELECT scan_id
             FROM scan
+            WHERE is_weekly=1
             ORDER BY window_start DESC, scan_id DESC
             """
         ).fetchall()

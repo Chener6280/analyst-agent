@@ -84,18 +84,64 @@ def test_agent_read_api_queries_dimension_team_and_entity(tmp_path: Path) -> Non
 
 
 def test_agent_read_api_queries_entity_mentions_across_recent_scans(tmp_path: Path) -> None:
-    scan_id, output_root, db_path = prepare_scan(tmp_path)
-    scan_dir_2 = output_root / "scans" / "manual-2026-06-08-2026-06-14-v1"
-    write_scan(scan_dir_2)
-    for path in (scan_dir_2 / "extracted").glob("*.stance.json"):
+    _, output_root, db_path = prepare_scan(tmp_path)
+    weekly_1 = write_entity_scan(
+        output_root,
+        db_path,
+        scan_id="2026-W23-v1",
+        mode="weekly",
+        start="2026-06-01",
+        end="2026-06-07",
+        iso_week=23,
+    )
+    write_entity_scan(
+        output_root,
+        db_path,
+        scan_id="manual-2026-06-10-2026-06-11-v1",
+        mode="manual",
+        start="2026-06-10",
+        end="2026-06-11",
+        iso_week=24,
+    )
+    weekly_2 = write_entity_scan(
+        output_root,
+        db_path,
+        scan_id="2026-W24-v1",
+        mode="weekly",
+        start="2026-06-08",
+        end="2026-06-14",
+        iso_week=24,
+    )
+
+    latest = get_entity_mentions_history("INDUSTRY:AI算力", db_path=db_path, weeks=1)
+    last_two = get_entity_mentions_history("INDUSTRY:AI算力", db_path=db_path, weeks=2)
+
+    assert [item["scan_id"] for item in latest["mentions"]] == [weekly_2]
+    assert [item["scan_id"] for item in last_two["mentions"]] == [weekly_2, weekly_1]
+
+
+def write_entity_scan(
+    output_root: Path,
+    db_path: Path,
+    *,
+    scan_id: str,
+    mode: str,
+    start: str,
+    end: str,
+    iso_week: int,
+) -> str:
+    scan_dir = output_root / "scans" / scan_id
+    write_scan(scan_dir)
+    for path in (scan_dir / "extracted").glob("*.stance.json"):
         doc = json.loads(path.read_text(encoding="utf-8"))
-        doc["scan_id"] = "manual-2026-06-08-2026-06-14-v1"
-        doc["window"] = {"start": "2026-06-08", "end": "2026-06-14", "iso_year": 2026, "iso_week": 24}
+        doc["scan_id"] = scan_id
+        doc["mode"] = mode
+        doc["window"] = {"start": start, "end": end, "iso_year": 2026, "iso_week": iso_week}
         path.write_text(json.dumps(doc, ensure_ascii=False), encoding="utf-8")
-    (scan_dir_2 / "coverage_summary.json").write_text(
+    (scan_dir / "coverage_summary.json").write_text(
         json.dumps(
             {
-                "scan_id": "manual-2026-06-08-2026-06-14-v1",
+                "scan_id": scan_id,
                 "teams": [
                     {"analyst_id": "广发证券:macro", "escalated": False},
                     {"analyst_id": "华创证券:macro", "escalated": False},
@@ -106,17 +152,9 @@ def test_agent_read_api_queries_entity_mentions_across_recent_scans(tmp_path: Pa
         ),
         encoding="utf-8",
     )
-    (scan_dir_2 / "config.json").write_text(json.dumps({"created_at": "2026-06-17T00:00:00"}), encoding="utf-8")
-    ingest_scan(scan_dir_2, db_path=db_path)
-
-    latest = get_entity_mentions_history("INDUSTRY:AI算力", db_path=db_path, weeks=1)
-    last_two = get_entity_mentions_history("INDUSTRY:AI算力", db_path=db_path, weeks=2)
-
-    assert [item["scan_id"] for item in latest["mentions"]] == ["manual-2026-06-08-2026-06-14-v1"]
-    assert [item["scan_id"] for item in last_two["mentions"]] == [
-        "manual-2026-06-08-2026-06-14-v1",
-        scan_id,
-    ]
+    (scan_dir / "config.json").write_text(json.dumps({"created_at": "2026-06-17T00:00:00"}), encoding="utf-8")
+    ingest_scan(scan_dir, db_path=db_path)
+    return scan_id
 
 
 def test_query_agent_interface_scan_context(tmp_path: Path) -> None:

@@ -91,6 +91,18 @@ The extraction report also records quality diagnostics such as
 coverage, and `source_type_counts`. Passing extraction means the JSON is valid;
 use these fields to judge how much of the run is analytically informative.
 
+Before changing the extraction model or using a new prompt/model family, run the
+gold-set accuracy gate:
+
+```bash
+python3 scripts/check_extract_accuracy.py \
+  --gold tests/gold/extraction_gold.jsonl \
+  --diagnostics-dir outputs/diagnostics
+```
+
+The seed gold rows only verify the harness. Production-quality accuracy checks
+require human-labeled gold rows authored outside the model.
+
 ## SQLite And Cross Section
 
 After Phase 2 extraction passes, ingest the stance JSON into SQLite:
