@@ -13,6 +13,7 @@ from core.store.queries import (
     ensure_scan_has_data,
     scan_row_counts,
     who_mentioned_entity,
+    who_mentioned_entity_history,
 )
 
 INTERFACE_VERSION = 1
@@ -157,6 +158,19 @@ def get_entity_mentions(
     }
 
 
+def get_entity_mentions_history(
+    entity_canonical_id: str,
+    *,
+    db_path: str | Path = "~/macro-strategy/analyst_views.db",
+    weeks: int | None = None,
+) -> dict[str, Any]:
+    return {
+        "entity_canonical_id": entity_canonical_id,
+        "weeks": weeks,
+        "mentions": who_mentioned_entity_history(entity_canonical_id, db_path=str(db_path), weeks=weeks),
+    }
+
+
 def compact_ordinal_list(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [
         {
@@ -224,6 +238,11 @@ def supported_queries(scan_id: str, entities: list[dict[str, Any]] | None = None
             "name": "who-mentioned",
             "description": "Return teams that mentioned one canonical entity.",
             "example": f"{base} who-mentioned --scan-id {scan_id} --entity {entity_example}",
+        },
+        {
+            "name": "who-mentioned-history",
+            "description": "Return recent scans where teams mentioned one canonical entity.",
+            "example": f"{base} who-mentioned-history --entity {entity_example} --weeks 4",
         },
     ]
 

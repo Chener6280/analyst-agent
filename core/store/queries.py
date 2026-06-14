@@ -62,6 +62,44 @@ def who_mentioned_entity(
         conn.close()
 
 
+def who_mentioned_entity_history(
+    entity_canonical_id: str,
+    *,
+    db_path: str = "~/macro-strategy/analyst_views.db",
+    weeks: int | None = None,
+) -> list[dict[str, Any]]:
+    conn = connect(db_path)
+    try:
+        scan_rows = conn.execute(
+            """
+            SELECT scan_id
+            FROM scan
+            ORDER BY window_start DESC, scan_id DESC
+            """
+        ).fetchall()
+        scan_ids = [row["scan_id"] for row in scan_rows]
+        if weeks is not None:
+            scan_ids = scan_ids[: max(0, int(weeks))]
+        if not scan_ids:
+            return []
+        placeholders = ",".join("?" for _ in scan_ids)
+        rows = conn.execute(
+            f"""
+            SELECT ss.scan_id, sc.window_start, sc.window_end, ss.analyst_id, a.institution, a.role,
+                   ss.dim_key, ss.tag_text, ss.lean, ss.evidence_ref, ss.verbatim
+            FROM stance_selection ss
+            JOIN analyst a ON a.analyst_id = ss.analyst_id
+            JOIN scan sc ON sc.scan_id = ss.scan_id
+            WHERE ss.tag_canonical_id=? AND ss.scan_id IN ({placeholders})
+            ORDER BY sc.window_start DESC, a.role, a.institution, ss.dim_key, ss.tag_text
+            """,
+            (entity_canonical_id, *scan_ids),
+        ).fetchall()
+        return [attach_source_url(conn, dict(row)) for row in rows]
+    finally:
+        conn.close()
+
+
 def aggregate_ordinal_conn(conn: sqlite3.Connection, scan_id: str, role: str, dim_key: str) -> dict[str, Any]:
     rows = conn.execute(
         """

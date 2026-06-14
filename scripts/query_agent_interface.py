@@ -12,7 +12,13 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from core.history.timeseries import build_consensus_series, build_history_readiness, build_tag_rotation, build_team_series
-from core.interface.read_api import build_agent_handoff, get_dimension_summary, get_entity_mentions, get_team_stance
+from core.interface.read_api import (
+    build_agent_handoff,
+    get_dimension_summary,
+    get_entity_mentions,
+    get_entity_mentions_history,
+    get_team_stance,
+)
 
 
 def main() -> int:
@@ -35,6 +41,8 @@ def run_query(args: argparse.Namespace) -> dict[str, Any]:
         return get_team_stance(args.scan_id, args.analyst_id, db_path=args.db_path)
     if args.command == "who-mentioned":
         return get_entity_mentions(args.scan_id, args.entity, db_path=args.db_path)
+    if args.command == "who-mentioned-history":
+        return get_entity_mentions_history(args.entity, db_path=args.db_path, weeks=args.weeks)
     if args.command == "history-readiness":
         return build_history_readiness(args.scan_id, db_path=args.db_path, min_scans=args.min_scans)
     if args.command == "consensus-series":
@@ -71,6 +79,14 @@ def parse_args() -> argparse.Namespace:
     who_mentioned = subparsers.add_parser("who-mentioned", help="Return teams that mentioned one canonical entity.")
     add_common(who_mentioned)
     who_mentioned.add_argument("--entity", required=True)
+
+    who_mentioned_history = subparsers.add_parser(
+        "who-mentioned-history",
+        help="Return recent scans where teams mentioned one canonical entity.",
+    )
+    who_mentioned_history.add_argument("--db-path", default="~/macro-strategy/analyst_views.db")
+    who_mentioned_history.add_argument("--entity", required=True)
+    who_mentioned_history.add_argument("--weeks", type=int)
 
     history_readiness = subparsers.add_parser("history-readiness", help="Return P6 history readiness for one scan.")
     add_common(history_readiness)

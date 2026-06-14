@@ -176,6 +176,10 @@ python3 scripts/query_agent_interface.py team-stance \
 python3 scripts/query_agent_interface.py who-mentioned \
   --scan-id manual-2026-06-01-2026-06-07-v1 \
   --entity INDUSTRY:AI算力
+
+python3 scripts/query_agent_interface.py who-mentioned-history \
+  --entity 300750.SZ \
+  --weeks 4
 ```
 
 ## History Readiness
