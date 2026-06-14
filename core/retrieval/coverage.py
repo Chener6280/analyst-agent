@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import re
 import json
 from datetime import date, datetime
@@ -227,6 +228,108 @@ def write_coverage_report(scan_id: str, coverages: list[dict[str, Any]], output_
     Path(output_path).write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+SOURCE_LINK_COLUMNS = [
+    "scan_id",
+    "analyst_id",
+    "institution",
+    "role",
+    "record_type",
+    "source_id",
+    "candidate_type",
+    "source_provider",
+    "source_type",
+    "account_name",
+    "title",
+    "published_at",
+    "url",
+    "canonical_url",
+    "found_by",
+    "text_access",
+    "attribution_confidence",
+    "source_completeness",
+    "adapter_mode",
+    "content_path",
+]
+
+
+def source_link_rows(coverages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for item in coverages:
+        base = {
+            "scan_id": item.get("scan_id", ""),
+            "analyst_id": item.get("analyst_id", ""),
+            "institution": item.get("institution", ""),
+            "role": item.get("role", ""),
+        }
+        for source in item.get("sources", []):
+            rows.append(
+                _link_row(
+                    base,
+                    record_type="attributed_source",
+                    source_id=source.get("id", ""),
+                    candidate_type=source.get("candidate_type", ""),
+                    source_provider=source.get("source", ""),
+                    source_type=source.get("source_type", ""),
+                    account_name=source.get("account_name", ""),
+                    title=source.get("title", ""),
+                    published_at=source.get("published_at", ""),
+                    url=source.get("url", ""),
+                    canonical_url=source.get("canonical_url", ""),
+                    found_by=source.get("found_by", []),
+                    text_access=source.get("text_access", ""),
+                    attribution_confidence=source.get("attribution_confidence", ""),
+                    source_completeness=source.get("source_completeness", ""),
+                    adapter_mode=source.get("adapter_mode", ""),
+                    content_path=source.get("content_path", ""),
+                )
+            )
+        for raw_type in ["primary", "fallback"]:
+            for hit in (item.get("raw_hits") or {}).get(raw_type, []):
+                extra = hit.get("extra", {}) or {}
+                rows.append(
+                    _link_row(
+                        base,
+                        record_type=f"raw_{raw_type}",
+                        source_id="",
+                        candidate_type=raw_type,
+                        source_provider=hit.get("source", ""),
+                        source_type=extra.get("source_type", ""),
+                        account_name=extra.get("account_name", ""),
+                        title=hit.get("title", ""),
+                        published_at=_date_only(hit.get("published_at")) or hit.get("published_at", ""),
+                        url=hit.get("url", ""),
+                        canonical_url=hit.get("canonical_url") or extra.get("canonical_url", ""),
+                        found_by=hit.get("found_by") or extra.get("found_by", []),
+                        text_access=extra.get("text_access", ""),
+                        attribution_confidence=extra.get("attribution_confidence", ""),
+                        source_completeness=extra.get("source_completeness", ""),
+                        adapter_mode=hit.get("adapter_mode") or extra.get("adapter_mode", ""),
+                        content_path=extra.get("content_path", ""),
+                    )
+                )
+    return rows
+
+
+def write_source_link_inventory(
+    scan_id: str,
+    coverages: list[dict[str, Any]],
+    output_dir: str | Path,
+) -> dict[str, str]:
+    output = Path(output_dir)
+    rows = source_link_rows(coverages)
+    json_path = output / "source_links.json"
+    csv_path = output / "source_links.csv"
+    md_path = output / "source_links.md"
+
+    json_path.write_text(json.dumps({"scan_id": scan_id, "links": rows}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    with csv_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=SOURCE_LINK_COLUMNS)
+        writer.writeheader()
+        writer.writerows(rows)
+    md_path.write_text(_source_links_markdown(scan_id, rows), encoding="utf-8")
+    return {"json": str(json_path), "csv": str(csv_path), "md": str(md_path)}
+
+
 def write_team_cache(item: dict[str, Any], output_dir: str | Path, index: int) -> None:
     cache_dir = Path(output_dir) / "search_cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -243,6 +346,46 @@ def write_team_cache(item: dict[str, Any], output_dir: str | Path, index: int) -
 
     json_path.write_text(json.dumps(item, ensure_ascii=False, indent=2), encoding="utf-8")
     md_path.write_text(_team_markdown(item), encoding="utf-8")
+
+
+def _link_row(base: dict[str, Any], **values: Any) -> dict[str, Any]:
+    row = {key: "" for key in SOURCE_LINK_COLUMNS}
+    row.update({key: _stringify_link_value(value) for key, value in base.items() if key in row})
+    row.update({key: _stringify_link_value(value) for key, value in values.items() if key in row})
+    return row
+
+
+def _stringify_link_value(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        return ",".join(str(item) for item in value)
+    if isinstance(value, dict):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True)
+    return str(value)
+
+
+def _source_links_markdown(scan_id: str, rows: list[dict[str, Any]]) -> str:
+    lines = [
+        f"# Source Links: {scan_id}",
+        "",
+        "| analyst_id | record_type | source | account | published_at | title | url | content_path |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    for row in rows:
+        lines.append(
+            "| {analyst_id} | {record_type} | {source} | {account} | {date} | {title} | {url} | {content_path} |".format(
+                analyst_id=_escape_pipe(row["analyst_id"]),
+                record_type=_escape_pipe(row["record_type"]),
+                source=_escape_pipe(row["source_provider"]),
+                account=_escape_pipe(row["account_name"]),
+                date=_escape_pipe(row["published_at"]),
+                title=_escape_pipe(row["title"]),
+                url=_escape_pipe(row["url"]),
+                content_path=_escape_pipe(row["content_path"]),
+            )
+        )
+    return "\n".join(lines) + "\n"
 
 
 def _write_article_cache(source: dict[str, Any], team: dict[str, Any], cache_dir: Path, content: str) -> Path:

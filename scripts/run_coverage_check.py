@@ -14,7 +14,13 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from core.config import load_analyst_list, make_scan_id, resolve_window
-from core.retrieval.coverage import assess_team_coverage, summarize_coverages, write_coverage_report, write_team_cache
+from core.retrieval.coverage import (
+    assess_team_coverage,
+    summarize_coverages,
+    write_coverage_report,
+    write_source_link_inventory,
+    write_team_cache,
+)
 from core.retrieval.source_matrix import (
     enrich_teams_with_source_matrix,
     load_source_matrix,
@@ -80,10 +86,14 @@ def main() -> int:
         encoding="utf-8",
     )
     write_coverage_report(scan_id, coverages, output_dir / "coverage_report.md")
+    source_links = write_source_link_inventory(scan_id, coverages, output_dir)
 
     print(f"scan_id={scan_id}")
     print(f"output_dir={output_dir}")
     print(f"coverage_report={output_dir / 'coverage_report.md'}")
+    print(f"source_links_md={source_links['md']}")
+    print(f"source_links_csv={source_links['csv']}")
+    print(f"source_links_json={source_links['json']}")
     print(f"phase1_gate={json.dumps(summary['phase1_gate'], ensure_ascii=False, sort_keys=True)}")
     return 0
 

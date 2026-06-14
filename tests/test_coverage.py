@@ -6,7 +6,9 @@ from core.retrieval.coverage import (
     classify_source_type,
     classify_text_access,
     summarize_coverages,
+    source_link_rows,
     write_coverage_report,
+    write_source_link_inventory,
     write_team_cache,
 )
 from core.retrieval.manual_wechat import parse_manual_wechat_article
@@ -254,3 +256,65 @@ def test_write_team_cache_materializes_live_content_for_extraction(tmp_path) -> 
     article = parse_manual_wechat_article(source["content_path"])
     assert article["metadata"]["account_name"] == "郭磊宏观茶座"
     assert "增长边际改善" in article["body"]
+
+
+def test_source_link_inventory_preserves_attributed_and_raw_links(tmp_path) -> None:
+    item = {
+        "scan_id": "scan",
+        "analyst_id": "广发证券:macro",
+        "institution": "广发证券",
+        "role": "macro",
+        "sources": [
+            {
+                "id": "s1",
+                "candidate_type": "primary",
+                "source": "wechat_opencli",
+                "source_type": "official_wechat",
+                "account_name": "郭磊宏观茶座",
+                "title": "公众号文章",
+                "published_at": "2026-06-14",
+                "url": "https://mp.weixin.qq.com/s/source",
+                "canonical_url": "wechat:tok:source",
+                "found_by": ["wechat_opencli"],
+                "text_access": "full_text",
+                "attribution_confidence": "high",
+                "source_completeness": "full_article",
+                "adapter_mode": "live",
+                "content_path": "/tmp/source.md",
+            }
+        ],
+        "raw_hits": {
+            "primary": [
+                {
+                    "source": "wechat_opencli",
+                    "title": "公众号文章",
+                    "url": "https://mp.weixin.qq.com/s/source",
+                    "published_at": "2026-06-14T08:00:00+08:00",
+                    "adapter_mode": "live",
+                    "extra": {"account_name": "郭磊宏观茶座", "canonical_url": "wechat:tok:source"},
+                }
+            ],
+            "fallback": [
+                {
+                    "source": "bocha",
+                    "title": "网页转载",
+                    "url": "https://example.com/repost",
+                    "published_at": "2026-06-14",
+                    "adapter_mode": "live",
+                    "extra": {"source_type": "aggregator"},
+                }
+            ],
+        },
+    }
+
+    rows = source_link_rows([item])
+    assert [row["record_type"] for row in rows] == ["attributed_source", "raw_primary", "raw_fallback"]
+    assert {row["url"] for row in rows} == {
+        "https://mp.weixin.qq.com/s/source",
+        "https://example.com/repost",
+    }
+
+    paths = write_source_link_inventory("scan", [item], tmp_path)
+    assert "网页转载" in (tmp_path / "source_links.md").read_text(encoding="utf-8")
+    assert "raw_fallback" in (tmp_path / "source_links.csv").read_text(encoding="utf-8")
+    assert set(paths) == {"json", "csv", "md"}

@@ -80,6 +80,9 @@ def build_manifest(
     artifacts = {
         "database": str(db_path),
         "coverage_report": str(output_dir / "scans" / scan_id / "coverage_report.md"),
+        "source_links_md": str(output_dir / "scans" / scan_id / "source_links.md"),
+        "source_links_csv": str(output_dir / "scans" / scan_id / "source_links.csv"),
+        "source_links_json": str(output_dir / "scans" / scan_id / "source_links.json"),
         "weekly_cross_section": str(reports_dir / "weekly_cross_section.md"),
         "weekly_brief": str(reports_dir / "weekly_brief.md"),
         "agent_handoff": str(reports_dir / "agent_handoff.md"),

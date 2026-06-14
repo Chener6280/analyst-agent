@@ -13,6 +13,9 @@ def test_project_package_exports_final_report_manifest_and_launchd_template(tmp_
     visual_pack = build_visual_pack(scan_id, output_root=output_root, db_path=db_path)
     reports_dir = output_root / "scans" / scan_id / "reports"
     (output_root / "scans" / scan_id / "coverage_report.md").write_text("# coverage\n", encoding="utf-8")
+    (output_root / "scans" / scan_id / "source_links.md").write_text("# links\n", encoding="utf-8")
+    (output_root / "scans" / scan_id / "source_links.csv").write_text("url\nhttps://example.com\n", encoding="utf-8")
+    (output_root / "scans" / scan_id / "source_links.json").write_text(json.dumps({"links": []}), encoding="utf-8")
     (reports_dir / "visual_pack.json").write_text(json.dumps(visual_pack), encoding="utf-8")
     (reports_dir / "visual_pack.md").write_text("# visual pack\n", encoding="utf-8")
     (reports_dir / "full_text_recovery_report.json").write_text(json.dumps({"production_ready": False}), encoding="utf-8")
@@ -31,6 +34,7 @@ def test_project_package_exports_final_report_manifest_and_launchd_template(tmp_
     assert Path(manifest["package_files"]["final_report_html"]).exists()
     assert Path(manifest["package_files"]["weekly_launchd_plist"]).read_text(encoding="utf-8").startswith("<?xml")
     assert "mcp/analyst_views_server.py" in manifest["mcp"]["server"]
+    assert manifest["artifacts"]["source_links_csv"].endswith("source_links.csv")
     assert manifest["checksums"]
 
 
@@ -39,6 +43,9 @@ def test_project_package_does_not_reuse_global_acceptance_for_different_scan(tmp
     visual_pack = build_visual_pack(scan_id, output_root=output_root, db_path=db_path)
     reports_dir = output_root / "scans" / scan_id / "reports"
     (output_root / "scans" / scan_id / "coverage_report.md").write_text("# coverage\n", encoding="utf-8")
+    (output_root / "scans" / scan_id / "source_links.md").write_text("# links\n", encoding="utf-8")
+    (output_root / "scans" / scan_id / "source_links.csv").write_text("url\nhttps://example.com\n", encoding="utf-8")
+    (output_root / "scans" / scan_id / "source_links.json").write_text(json.dumps({"links": []}), encoding="utf-8")
     (reports_dir / "visual_pack.json").write_text(json.dumps(visual_pack), encoding="utf-8")
     (reports_dir / "visual_pack.md").write_text("# visual pack\n", encoding="utf-8")
     (reports_dir / "full_text_recovery_report.json").write_text(json.dumps({"production_ready": False}), encoding="utf-8")
