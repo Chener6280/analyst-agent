@@ -305,8 +305,10 @@ def quality_banner(brief: dict[str, Any], inputs: dict[str, Any]) -> str:
     quality = brief.get("quality") or {}
     recovery = inputs.get("full_text_recovery") or {}
     history = inputs.get("history_readiness") or {}
-    if recovery.get("production_ready") is True and history.get("status") == "ready":
-        return "数据质量提示：当前结果满足 production profile。"
+    if recovery.get("production_ready") is True:
+        if history.get("status") == "ready":
+            return "数据质量提示：当前结果满足 production profile。"
+        return "数据质量提示：本周全文与来源质量满足 production profile；历史趋势模块将在积累至少 4 个真实周度 scan 后启用。"
     return "数据质量提示：本周结果为 sample MVP 输出。全文覆盖率低，部分来源为转载或研报平台，当前结果不应作为正式投研结论。"
 
 

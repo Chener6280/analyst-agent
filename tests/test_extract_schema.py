@@ -137,6 +137,42 @@ def test_run_extraction_writes_valid_json(tmp_path: Path) -> None:
     assert "source_types" in report
 
 
+def test_extraction_skips_non_text_sources_without_front_matter(tmp_path: Path) -> None:
+    article = tmp_path / "macro.md"
+    cache_summary = tmp_path / "team_cache.md"
+    write_manual_article(
+        article,
+        role="macro",
+        analyst_id="兴业证券:macro",
+        institution="兴业证券",
+        account_name="段超宏观研究",
+        body="信贷延续较弱，等待政策呵护。后续财政发力。",
+    )
+    cache_summary.write_text("# Search Cache\n\n- metadata-only row\n", encoding="utf-8")
+    team = team_record(article, role="macro", analyst_id="兴业证券:macro", institution="兴业证券")
+    team["text_access"] = "full_text"
+    team["attribution_confidence"] = "high"
+    team["sources"].append(
+        {
+            "id": "s2",
+            "title": "只有元数据的文章",
+            "url": "https://example.com/meta",
+            "source": "wechat_opencli",
+            "source_type": "official_wechat",
+            "published_at": "2026-06-02",
+            "adapter_mode": "live",
+            "text_access": "metadata_only",
+            "content_path": str(cache_summary),
+        }
+    )
+
+    doc, source_texts = extract_team_stance("2026-W24-full-v2", team)
+
+    assert list(source_texts) == ["s1"]
+    assert [source["id"] for source in doc["sources"]] == ["s1"]
+    assert doc["dimensions"]["fiscal"]["value"] == 1
+
+
 def test_run_extraction_removes_stale_stance_json(tmp_path: Path) -> None:
     article = tmp_path / "macro.md"
     write_manual_article(

@@ -115,7 +115,7 @@ def split_sources(sources: list[str] | None) -> tuple[list[str], list[str]]:
         return PRIMARY_SOURCES, FALLBACK_SOURCES
     primary = [source for source in sources if source in PRIMARY_SOURCES]
     fallback = [source for source in sources if source in FALLBACK_SOURCES]
-    return primary or PRIMARY_SOURCES, fallback or FALLBACK_SOURCES
+    return primary, fallback
 
 
 def summarize_coverages(items: list[dict[str, Any]]) -> dict[str, Any]:
@@ -391,7 +391,7 @@ def _source_links_markdown(scan_id: str, rows: list[dict[str, Any]]) -> str:
 def _write_article_cache(source: dict[str, Any], team: dict[str, Any], cache_dir: Path, content: str) -> Path:
     article_dir = cache_dir / "articles"
     article_dir.mkdir(parents=True, exist_ok=True)
-    source_id = str(source.get("id") or "source")
+    source_id = _safe_cache_token(str(source.get("id") or "source"))
     title = str(source.get("title") or source_id)
     safe_title = re.sub(r"[^0-9A-Za-z\u4e00-\u9fff._-]+", "_", title).strip("_")[:80] or source_id
     path = article_dir / f"{source_id}_{safe_title}.md"
@@ -413,6 +413,10 @@ def _write_article_cache(source: dict[str, Any], team: dict[str, Any], cache_dir
     lines.extend(["---", "", body, ""])
     path.write_text("\n".join(lines), encoding="utf-8")
     return path
+
+
+def _safe_cache_token(value: str) -> str:
+    return re.sub(r"[^0-9A-Za-z_-]+", "_", value).strip("_")[:40] or "source"
 
 
 def _escape_yaml(value: str) -> str:

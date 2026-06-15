@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from core.retrieval.coverage import (
     assess_team_coverage,
     classify_attribution,
     classify_source_type,
     classify_text_access,
+    split_sources,
     summarize_coverages,
     source_link_rows,
     write_coverage_report,
@@ -176,6 +179,13 @@ def test_wechat_source_lost_is_not_masked_by_fallback(monkeypatch) -> None:
     assert item["escalated"] is False
 
 
+def test_explicit_wechat_sources_do_not_enable_web_fallback() -> None:
+    primary, fallback = split_sources(["wechat_opencli"])
+
+    assert primary == ["wechat_opencli"]
+    assert fallback == []
+
+
 def test_coverage_report_shows_source_type_without_success_noise(tmp_path) -> None:
     path = tmp_path / "coverage.md"
     write_coverage_report(
@@ -256,6 +266,36 @@ def test_write_team_cache_materializes_live_content_for_extraction(tmp_path) -> 
     article = parse_manual_wechat_article(source["content_path"])
     assert article["metadata"]["account_name"] == "郭磊宏观茶座"
     assert "增长边际改善" in article["body"]
+
+
+def test_write_team_cache_sanitizes_source_id_in_article_path(tmp_path) -> None:
+    item = {
+        "analyst_id": "广发证券:macro",
+        "institution": "广发证券",
+        "role": "macro",
+        "team_members": ["郭磊"],
+        "sources": [
+            {
+                "id": "../escape",
+                "title": "测试",
+                "url": "https://mp.weixin.qq.com/s/test",
+                "source": "wechat_opencli",
+                "source_type": "official_wechat",
+                "published_at": "2026-06-14",
+                "account_name": "郭磊宏观茶座",
+                "text_access": "full_text",
+                "attribution_confidence": "high",
+                "content": "增长边际改善。" * 500,
+            }
+        ],
+        "raw_hits": {"primary": [], "fallback": []},
+    }
+
+    write_team_cache(item, tmp_path, 1)
+
+    content_path = Path(item["sources"][0]["content_path"])
+    assert content_path.parent == tmp_path / "search_cache" / "articles"
+    assert content_path.name.startswith("escape_")
 
 
 def test_source_link_inventory_preserves_attributed_and_raw_links(tmp_path) -> None:

@@ -20,7 +20,9 @@ def resolve_window(
         raise ValueError("mode must be weekly or manual")
 
     zone = ZoneInfo(tz)
-    if mode == "manual":
+    if mode == "manual" or (mode == "weekly" and (start or end)):
+        if mode == "weekly" and bool(start) != bool(end):
+            raise ValueError("weekly mode requires both start and end when overriding the weekly window")
         if not start or not end:
             raise ValueError("manual mode requires start and end")
         start_date = _parse_date(start, "start")

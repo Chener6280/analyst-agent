@@ -43,6 +43,34 @@ export IR_SEARCH_LIVE=1
 `mock` and `placeholder` adapter results are never counted as formal coverage.
 They remain visible in diagnostics so source quality can be inspected directly.
 
+## WeChat Source Readiness
+
+Production WeChat runs use `broker_wechat_matrix.md` to choose the searchable
+account list. Every searched account should have both `dajiala.name` and
+`wewe.mp_id` in `/Users/chen/Documents/ir_search/accounts.json` before retrieval.
+
+After changing `broker_wechat_matrix.md` or adding a new public account, run:
+
+```bash
+python3 scripts/ensure_wechat_dual_source_accounts.py \
+  --analyst-list data/analyst-list-full-2026w24.md \
+  --source-matrix broker_wechat_matrix.md \
+  --fail-on-missing
+```
+
+To add missing `dajiala.name` entries using the account name:
+
+```bash
+python3 scripts/ensure_wechat_dual_source_accounts.py \
+  --analyst-list data/analyst-list-full-2026w24.md \
+  --source-matrix broker_wechat_matrix.md \
+  --apply
+```
+
+Live `wechat_opencli` coverage now fails before retrieval if any searched
+account lacks either provider config. Use `--allow-single-wechat-provider` only
+for an intentional temporary exception.
+
 ## Production Smoke Run
 
 The first live production smoke list is

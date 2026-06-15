@@ -102,6 +102,10 @@ def build_commands(args: argparse.Namespace) -> tuple[list[str], list[str], list
     ]
     if args.env_file:
         coverage_cmd.extend(["--env-file", args.env_file])
+    if getattr(args, "allow_single_wechat_provider", False):
+        coverage_cmd.append("--allow-single-wechat-provider")
+    if getattr(args, "allow_empty_wewe_feeds", False):
+        coverage_cmd.append("--allow-empty-wewe-feeds")
     readiness_cmd = [
         sys.executable,
         "scripts/check_phase2_readiness.py",
@@ -127,6 +131,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-root", default="~/macro-strategy")
     parser.add_argument("--source-whitelist", default="data/source_whitelist.yaml")
     parser.add_argument("--source-matrix", default="broker_wechat_matrix.md")
+    parser.add_argument("--allow-single-wechat-provider", action="store_true", help="Allow live WeChat retrieval when an account lacks dajiala or wewe config.")
+    parser.add_argument("--allow-empty-wewe-feeds", action="store_true", help="Allow empty wewe feeds without dajiala fallback.")
     return parser.parse_args()
 
 

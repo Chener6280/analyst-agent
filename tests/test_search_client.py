@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from types import SimpleNamespace
 
-from core.retrieval.search_client import _dedupe_hits, _hit_to_dict, coarse_freshness
+from core.retrieval.search_client import _dedupe_hits, _hit_to_dict, _run_wechat_accounts, coarse_freshness
 
 
 @dataclass
@@ -54,3 +55,60 @@ def test_coarse_freshness_tracks_manual_window_span() -> None:
     assert coarse_freshness({"start_at": "2026-06-01T00:00:00", "end_at": "2026-06-07T23:59:59"}) == "oneWeek"
     assert coarse_freshness({"start_at": "2026-06-01T00:00:00", "end_at": "2026-06-21T23:59:59"}) == "oneMonth"
     assert coarse_freshness({"start_at": "2025-01-01T00:00:00", "end_at": "2026-06-21T23:59:59"}) == "noLimit"
+
+
+def test_run_wechat_accounts_calls_gzh_fetch_with_explicit_account(monkeypatch) -> None:
+    calls = []
+
+    def fake_run(cmd, check, capture_output, text, timeout):
+        calls.append(cmd)
+        return SimpleNamespace(
+            stdout=(
+                '[{"title":"本周观点","url":"https://mp.weixin.qq.com/s/x",'
+                '"published_at":"2026-06-14 12:00","account_name":"一瑜中的",'
+                '"content":"' + ("正文" * 700) + '"}]'
+            )
+        )
+
+    monkeypatch.setenv("WECHAT_OPENCLI_COMMAND", "python3 /tmp/gzh_fetch.py --accounts /tmp/accounts.json --opencli")
+    monkeypatch.setattr("subprocess.run", fake_run)
+
+    result = _run_wechat_accounts(
+        {"official_accounts": ["一瑜中的"]},
+        {"start": "2026-06-08", "end": "2026-06-14"},
+    )
+
+    assert result is not None
+    assert result["diagnostics"][0]["ok"] is True
+    assert result["hits"][0]["extra"]["account_name"] == "一瑜中的"
+    assert len(result["hits"][0]["extra"]["content"]) >= 1200
+    assert "--account" in calls[0]
+    assert "一瑜中的" in calls[0]
+    assert "--fulltext" in calls[0]
+
+
+def test_run_wechat_accounts_rejects_non_gzh_command(monkeypatch) -> None:
+    monkeypatch.setenv("WECHAT_OPENCLI_COMMAND", "python3 /tmp/not_fetch.py")
+
+    result = _run_wechat_accounts(
+        {"official_accounts": ["一瑜中的"]},
+        {"start": "2026-06-08", "end": "2026-06-14"},
+    )
+
+    assert result is not None
+    assert result["hits"] == []
+    assert "must invoke gzh_fetch.py" in result["diagnostics"][0]["error"]
+
+
+def test_run_wechat_accounts_reports_bad_timeout(monkeypatch) -> None:
+    monkeypatch.setenv("WECHAT_OPENCLI_COMMAND", "python3 /tmp/gzh_fetch.py")
+    monkeypatch.setenv("WECHAT_OPENCLI_TIMEOUT", "slow")
+
+    result = _run_wechat_accounts(
+        {"official_accounts": ["一瑜中的"]},
+        {"start": "2026-06-08", "end": "2026-06-14"},
+    )
+
+    assert result is not None
+    assert result["hits"] == []
+    assert "WECHAT_OPENCLI_TIMEOUT must be an integer" in result["diagnostics"][0]["error"]

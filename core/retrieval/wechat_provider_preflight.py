@@ -95,8 +95,16 @@ def build_wechat_provider_preflight(
             "not_ready": sum(1 for row in rows if not row["ready"]),
             "dajiala_configured": sum(1 for row in rows if row["dajiala"]["configured"]),
             "wewe_configured": sum(1 for row in rows if row["wewe"]["configured"]),
+            "dual_configured": sum(1 for row in rows if row["dajiala"]["configured"] and row["wewe"]["configured"]),
+            "missing_dajiala_name": sum(1 for row in rows if not row["dajiala"]["configured"]),
+            "missing_wewe_mp_id": sum(1 for row in rows if not row["wewe"]["configured"]),
             "dajiala_with_window_articles": sum(1 for row in rows if row["dajiala"].get("in_window_count")),
             "wewe_with_window_articles": sum(1 for row in rows if row["wewe"].get("in_window_count")),
+            "dual_with_window_articles": sum(
+                1 for row in rows if row["dajiala"].get("in_window_count") and row["wewe"].get("in_window_count")
+            ),
+            "wewe_empty_feed": sum(1 for row in rows if is_wewe_empty_feed(row)),
+            "empty_wewe_without_dajiala": sum(1 for row in rows if is_empty_wewe_without_dajiala(row)),
         },
         "accounts": rows,
     }
@@ -219,12 +227,27 @@ def provider_issues(dajiala: dict[str, Any], wewe: dict[str, Any], ready: bool) 
         issues.append("missing_wewe_mp_id")
     elif wewe.get("error"):
         issues.append("wewe_error")
+    elif wewe.get("ok") and wewe.get("item_count") == 0:
+        issues.append("wewe_empty_feed")
     elif not wewe.get("in_window_count"):
         issues.append("wewe_no_window_articles")
+
+    if not dajiala.get("configured") and wewe.get("ok") and wewe.get("item_count") == 0:
+        issues.append("empty_wewe_without_dajiala")
 
     if not ready:
         issues.append("no_provider_window_articles")
     return issues
+
+
+def is_wewe_empty_feed(row: dict[str, Any]) -> bool:
+    wewe = row.get("wewe") or {}
+    return bool(wewe.get("configured") and wewe.get("ok") and wewe.get("item_count") == 0)
+
+
+def is_empty_wewe_without_dajiala(row: dict[str, Any]) -> bool:
+    dajiala = row.get("dajiala") or {}
+    return is_wewe_empty_feed(row) and not dajiala.get("configured")
 
 
 def render_wechat_provider_preflight(data: dict[str, Any]) -> str:
@@ -244,8 +267,14 @@ def render_wechat_provider_preflight(data: dict[str, Any]) -> str:
         "not_ready",
         "dajiala_configured",
         "wewe_configured",
+        "dual_configured",
+        "missing_dajiala_name",
+        "missing_wewe_mp_id",
         "dajiala_with_window_articles",
         "wewe_with_window_articles",
+        "dual_with_window_articles",
+        "wewe_empty_feed",
+        "empty_wewe_without_dajiala",
     ]:
         lines.append(f"| {key} | {summary.get(key, 0)} |")
     lines.extend(

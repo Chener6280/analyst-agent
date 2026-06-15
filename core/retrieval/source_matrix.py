@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
 DEFAULT_SOURCE_MATRIX = Path(__file__).resolve().parents[2] / "broker_wechat_matrix.md"
-EXTERNAL_SOURCE_MATRIX = Path("/Users/chen/Documents/ir_search/work/broker_wechat_matrix.md")
+EXTERNAL_SOURCE_MATRIX = Path(os.environ.get("BROKER_WECHAT_MATRIX_MIRROR", "/Users/chen/Documents/ir_search/work/broker_wechat_matrix.md"))
 OFFICIAL_SEARCH_INSTITUTIONS = {"中信", "中国银河"}
 
 

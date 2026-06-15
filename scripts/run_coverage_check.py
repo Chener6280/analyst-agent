@@ -87,6 +87,21 @@ def main() -> int:
         provider_paths = write_wechat_provider_preflight(provider_preflight, output_dir)
         print(f"wechat_provider_preflight={provider_paths['md']}")
         print(f"wechat_provider_preflight_json={provider_paths['json']}")
+        missing_provider_config = provider_preflight["summary"].get("missing_dajiala_name", 0) + provider_preflight["summary"].get(
+            "missing_wewe_mp_id", 0
+        )
+        if missing_provider_config and not args.allow_single_wechat_provider:
+            print("wechat_provider_preflight=single_provider_failed")
+            print(f"missing_dajiala_name={provider_preflight['summary'].get('missing_dajiala_name', 0)}")
+            print(f"missing_wewe_mp_id={provider_preflight['summary'].get('missing_wewe_mp_id', 0)}")
+            print("rerun_with=--allow-single-wechat-provider")
+            return 2
+        empty_without_dajiala = provider_preflight["summary"].get("empty_wewe_without_dajiala", 0)
+        if empty_without_dajiala and not args.allow_empty_wewe_feeds:
+            print("wechat_provider_preflight=empty_wewe_failed")
+            print(f"empty_wewe_without_dajiala={empty_without_dajiala}")
+            print("rerun_with=--allow-empty-wewe-feeds")
+            return 2
         if args.strict_wechat_provider_preflight and provider_preflight["summary"]["team_not_ready"]:
             print("wechat_provider_preflight=strict_failed")
             return 2
@@ -133,6 +148,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--source-list-confirmed", action="store_true", help="Confirm analyst/source list review before retrieval.")
     parser.add_argument("--skip-wechat-provider-preflight", action="store_true", help="Skip dajiala/wewe provider checks before retrieval.")
     parser.add_argument("--strict-wechat-provider-preflight", action="store_true", help="Fail before retrieval if any official account has no dajiala/wewe window articles.")
+    parser.add_argument("--allow-single-wechat-provider", action="store_true", help="Allow live retrieval when a searched account lacks dajiala or wewe configuration.")
+    parser.add_argument("--allow-empty-wewe-feeds", action="store_true", help="Allow live retrieval to proceed when a configured wewe feed is empty and no dajiala fallback exists.")
     parser.add_argument("--wechat-accounts", help="Path to ir_search accounts.json for dajiala/wewe preflight.")
     parser.add_argument("--wewe-base", help="Override WEWE_RSS_BASE for provider preflight.")
     parser.add_argument("--wechat-provider-timeout", type=int, default=8)

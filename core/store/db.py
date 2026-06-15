@@ -12,6 +12,8 @@ from core.config import load_analyst_list
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_PATH = REPO_ROOT / "docs" / "db_schema.sql"
 BAD_ADAPTER_MODES = {"mock", "placeholder"}
+SQL_IDENTIFIER_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+SQL_COLUMN_TYPE_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]*(?:\s+[A-Za-z][A-Za-z0-9_]*)*")
 
 
 def connect(db_path: str | Path = "~/macro-strategy/analyst_views.db") -> sqlite3.Connection:
@@ -27,9 +29,24 @@ def init_db(conn: sqlite3.Connection, schema_path: str | Path = SCHEMA_PATH) -> 
 
 
 def ensure_column(conn: sqlite3.Connection, table: str, column: str, column_type: str) -> None:
+    table = validate_sql_identifier(table)
+    column = validate_sql_identifier(column)
+    column_type = validate_sql_column_type(column_type)
     existing = {row["name"] if isinstance(row, sqlite3.Row) else row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
     if column not in existing:
         conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {column_type}")
+
+
+def validate_sql_identifier(value: str) -> str:
+    if not SQL_IDENTIFIER_RE.fullmatch(value):
+        raise ValueError(f"invalid SQL identifier: {value!r}")
+    return value
+
+
+def validate_sql_column_type(value: str) -> str:
+    if not SQL_COLUMN_TYPE_RE.fullmatch(value):
+        raise ValueError(f"invalid SQL column type: {value!r}")
+    return value
 
 
 def ingest_scan(
@@ -85,6 +102,7 @@ def ensure_single_scan_id(docs: list[dict[str, Any]]) -> str:
 
 def purge_scan_rows(conn: sqlite3.Connection, scan_id: str) -> None:
     for table in ["stance_selection", "intra_window_change", "source", "stance"]:
+        table = validate_sql_identifier(table)
         conn.execute(f"DELETE FROM {table} WHERE scan_id=?", (scan_id,))
 
 
@@ -278,6 +296,7 @@ def read_json(path: Path) -> dict[str, Any]:
 
 
 def count_rows(conn: sqlite3.Connection, table: str) -> int:
+    table = validate_sql_identifier(table)
     return int(conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
 
 

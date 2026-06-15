@@ -5,7 +5,7 @@ import sqlite3
 from pathlib import Path
 
 from core.schema.stance import dimensions_for_role
-from core.store.db import count_rows, ingest_scan
+from core.store.db import count_rows, ensure_column, ingest_scan
 
 
 def make_doc(*, analyst_id: str, institution: str, role: str, dim_values: dict, selections: list[dict] | None = None) -> dict:
@@ -160,3 +160,25 @@ def test_ingest_rejects_mock_source(tmp_path: Path) -> None:
         assert "refusing to ingest bad adapter source" in str(exc)
     else:
         raise AssertionError("mock source should be rejected")
+
+
+def test_sql_identifier_helpers_reject_unsafe_names(tmp_path: Path) -> None:
+    conn = sqlite3.connect(tmp_path / "views.db")
+    try:
+        conn.execute("CREATE TABLE source(id TEXT)")
+        ensure_column(conn, "source", "source_type", "TEXT")
+        try:
+            ensure_column(conn, "source; DROP TABLE source;--", "bad", "TEXT")
+        except ValueError as exc:
+            assert "invalid SQL identifier" in str(exc)
+        else:
+            raise AssertionError("unsafe table name should be rejected")
+
+        try:
+            count_rows(conn, "source WHERE 1=1")
+        except ValueError as exc:
+            assert "invalid SQL identifier" in str(exc)
+        else:
+            raise AssertionError("unsafe count table should be rejected")
+    finally:
+        conn.close()

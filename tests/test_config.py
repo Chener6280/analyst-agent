@@ -26,6 +26,15 @@ def test_weekly_window_handles_cross_year_iso_week() -> None:
     assert make_scan_id(window, "weekly", "v1") == "2025-W52-v1"
 
 
+def test_weekly_window_can_use_explicit_dates_for_backfill() -> None:
+    window = resolve_window("weekly", "2026-06-08", "2026-06-14")
+    assert window["start"] == "2026-06-08"
+    assert window["end"] == "2026-06-14"
+    assert window["iso_year"] == 2026
+    assert window["iso_week"] == 24
+    assert make_scan_id(window, "weekly", "v1") == "2026-W24-v1"
+
+
 def test_load_analyst_list() -> None:
     teams = load_analyst_list("data/analyst-list.md")
     assert teams[0]["analyst_id"] == "广发证券:macro"

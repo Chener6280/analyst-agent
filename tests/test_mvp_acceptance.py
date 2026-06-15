@@ -7,6 +7,8 @@ from pathlib import Path
 from scripts.check_mvp_acceptance import (
     acceptance_stem,
     build_acceptance,
+    build_production_metrics,
+    build_trend_metrics,
     build_quality_warnings,
     format_nested_count_map,
     parse_percent,
@@ -268,10 +270,70 @@ def test_production_profile_fails_when_quality_is_sample_level(tmp_path: Path) -
         min_extracted=5,
         quality_profile="production",
     )
+    production_trend = build_acceptance(
+        scan_dir,
+        diagnostics_dir=diagnostics,
+        db_path=db_path,
+        min_teams=10,
+        min_extracted=5,
+        quality_profile="production_trend",
+    )
 
     assert sample["engineering_ready"] is True
+    # production_v1 still fails on real quality gates (full_text_rate) ...
     assert production["passed"] is False
     assert production["production_ready"] is False
     failed = {item["metric"] for item in production["failed_metrics"]}
     assert "full_text_rate" in failed
-    assert "history readiness for trend" in failed
+    # ... but production_v1 must NOT block on the time-series trend gate.
+    assert "history readiness for trend" not in failed
+    # production_trend, by contrast, enforces the trend gate (insufficient_history here).
+    trend_failed = {item["metric"] for item in production_trend["failed_metrics"]}
+    assert "history readiness for trend" in trend_failed
+    assert production_trend["trend_ready"] is False
+    # insufficient_history is surfaced as a non-blocking notice, not a v1 failure.
+    assert production["trend_enabled"] is False
+    assert any("Trend module not enabled" in w for w in production["quality_warnings"])
+
+
+def test_production_accuracy_gate_blocks_when_missing_or_seed_only() -> None:
+    # 门从未跑：缺失 -> 失败
+    missing = build_production_metrics({}, {}, {}, 8)
+    missing_failed = {m["metric"] for m in missing if not m["passed"]}
+    assert "extraction accuracy gate" in missing_failed
+    assert "extraction gold sample size" in missing_failed
+
+    # 仅种子（ready 但标注维度过少）-> sample size 失败
+    seed = {"ready": True, "annotated_dimensions": 5, "sign_reversals": 0, "ordinal_accuracy": 1.0}
+    seed_failed = {m["metric"] for m in build_production_metrics({}, {}, seed, 8) if not m["passed"]}
+    assert "extraction gold sample size" in seed_failed
+    assert "extraction accuracy gate" not in seed_failed
+
+    # 有符号反转 -> 失败
+    rev = {"ready": True, "annotated_dimensions": 24, "sign_reversals": 2, "ordinal_accuracy": 0.9}
+    assert "extraction sign_reversals" in {m["metric"] for m in build_production_metrics({}, {}, rev, 8) if not m["passed"]}
+
+
+def test_production_accuracy_gate_passes_with_real_labels() -> None:
+    real = {"ready": True, "annotated_dimensions": 24, "sign_reversals": 0, "ordinal_accuracy": 0.95}
+    failed = {m["metric"] for m in build_production_metrics({}, {}, real, 8) if not m["passed"]}
+    assert "extraction accuracy gate" not in failed
+    assert "extraction gold sample size" not in failed
+    assert "extraction sign_reversals" not in failed
+
+
+def test_production_v1_core_excludes_trend_gate() -> None:
+    # production_v1 core metrics must not contain the time-series trend gate
+    real = {"ready": True, "annotated_dimensions": 24, "sign_reversals": 0, "ordinal_accuracy": 0.95}
+    core = {m["metric"] for m in build_production_metrics({}, {}, real, 8)}
+    assert "history readiness for trend" not in core
+    # the trend gate lives in its own builder
+    trend = {m["metric"] for m in build_trend_metrics({"status": "insufficient_history"})}
+    assert "history readiness for trend" in trend
+    assert build_trend_metrics({"status": "insufficient_history"})[0]["passed"] is False
+    assert build_trend_metrics({"status": "ready"})[0]["passed"] is True
+
+
+def test_quality_warning_flags_unrun_accuracy_gate() -> None:
+    warnings = build_quality_warnings({}, {"written_count": 0, "quality": {}}, {})
+    assert any("accuracy gate has not been run" in w for w in warnings)

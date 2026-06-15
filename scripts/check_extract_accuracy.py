@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -207,7 +208,8 @@ def main() -> int:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Check ordinal extraction accuracy against a human gold set.")
-    parser.add_argument("--gold", default=str(DEFAULT_GOLD))
+    parser.add_argument("--gold", default=os.environ.get("EXTRACTION_GOLD_PATH", str(DEFAULT_GOLD)),
+                        help="Gold file. Defaults to EXTRACTION_GOLD_PATH or the committed seed; point at a human-labeled private gold (e.g. tests/gold/*.private.jsonl) for real validation.")
     parser.add_argument("--diagnostics-dir", default="outputs/diagnostics")
     parser.add_argument("--min-accuracy", type=float, default=0.9)
     parser.add_argument("--max-false-stance", type=int, default=0)

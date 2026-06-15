@@ -28,6 +28,7 @@ def main() -> int:
         min_teams=args.min_teams,
         min_extracted=args.min_extracted,
         quality_profile=args.quality_profile,
+        min_gold_dims=args.min_gold_dims,
     )
     json_path, md_path, scan_json_path, scan_md_path = write_diagnostic_pair(
         diagnostics_dir,
@@ -55,10 +56,12 @@ def build_acceptance(
     min_teams: int,
     min_extracted: int,
     quality_profile: str = "sample",
+    min_gold_dims: int = 8,
 ) -> dict[str, Any]:
     coverage = read_json(scan_dir / "coverage_summary.json")
     extraction = read_json(scan_dir / "extracted" / "extraction_summary.json")
     phase3 = read_json(diagnostics_dir / "phase3_readiness.json")
+    extract_accuracy = read_json(diagnostics_dir / "extract_accuracy.json")
     stance_docs = load_stance_docs(scan_dir / "extracted")
     scan_id = coverage.get("scan_id") or scan_dir.name
 
@@ -155,23 +158,39 @@ def build_acceptance(
             project_completion.get("status") in {"ready", "review_required"},
         ),
     ]
-    production_metrics = build_production_metrics(summary, extraction_quality, history_readiness)
-    metrics = sample_metrics if quality_profile == "sample" else production_metrics
+    production_metrics = build_production_metrics(summary, extraction_quality, extract_accuracy, min_gold_dims)
+    trend_metrics = build_trend_metrics(history_readiness)
+    production_trend_metrics = production_metrics + trend_metrics
+    profile_metrics = {
+        "sample": sample_metrics,
+        "production": production_metrics,
+        "production_trend": production_trend_metrics,
+    }
+    metrics = profile_metrics.get(quality_profile, sample_metrics)
     failed = [item for item in metrics if not item["passed"]]
     engineering_ready = not [item for item in sample_metrics if not item["passed"]]
     production_ready = not [item for item in production_metrics if not item["passed"]]
+    trend_ready = not [item for item in production_trend_metrics if not item["passed"]]
+    history_status = history_readiness.get("status")
+    trend_enabled = history_status == "ready"
+    warnings = build_quality_warnings(summary, extraction, extract_accuracy)
+    if not trend_enabled:
+        warnings.append(f"Trend module not enabled (history_status={history_status}); time-series gates are deferred until >=4 real weekly scans. Coverage/extraction production_v1 acceptance is unaffected.")
     return {
         "passed": not failed,
         "quality_profile": quality_profile,
         "engineering_ready": engineering_ready,
         "production_ready": production_ready,
+        "trend_ready": trend_ready,
+        "trend_enabled": trend_enabled,
+        "history_status": history_status,
         "scan_id": scan_id,
         "scan_dir": str(scan_dir),
         "db_path": str(db_path),
         "metrics": metrics,
         "failed_metrics": failed,
         "main_causes": main_causes(failed),
-        "quality_warnings": build_quality_warnings(summary, extraction),
+        "quality_warnings": warnings,
         "quality": {
             "full_text_rate": summary.get("full_text_rate"),
             "source_type_counts": summary.get("source_type_counts", {}),
@@ -183,6 +202,8 @@ def build_acceptance(
         "db_counts": db_counts,
         "sample_metrics": sample_metrics,
         "production_metrics": production_metrics,
+        "trend_metrics": trend_metrics,
+        "production_trend_metrics": production_trend_metrics,
     }
 
 
@@ -197,8 +218,12 @@ def acceptance_stem(quality_profile: str) -> str:
 def build_production_metrics(
     coverage_summary: dict[str, Any],
     extraction_quality: dict[str, Any],
-    history_readiness: dict[str, Any],
+    extract_accuracy: dict[str, Any] | None = None,
+    min_gold_dims: int = 8,
 ) -> list[dict[str, Any]]:
+    """production_v1 core gates: coverage, full-text, source quality, extraction accuracy.
+    Trend (time-series) gating is intentionally NOT here; see build_trend_metrics."""
+    extract_accuracy = extract_accuracy or {}
     full_text_rate = parse_percent(coverage_summary.get("full_text_rate")) or 0.0
     production_coverage_rate = parse_percent(coverage_summary.get("production_coverage_rate")) or 0.0
     official_rate = parse_percent(coverage_summary.get("official_or_broker_source_rate")) or 0.0
@@ -213,6 +238,17 @@ def build_production_metrics(
         metric("zero_signal_documents", "<=1", len(zero_signal), len(zero_signal) <= 1),
         metric("macro core ordinal non-null coverage", ">=50%", f"{non_null_core}/5", non_null_core / 5 >= 0.50),
         metric("mock_or_placeholder_count", 0, coverage_summary.get("mock_or_placeholder_count"), coverage_summary.get("mock_or_placeholder_count") == 0),
+        metric("extraction accuracy gate", "ready", extract_accuracy.get("ready"), extract_accuracy.get("ready") is True),
+        metric("extraction gold sample size", f">={min_gold_dims}", extract_accuracy.get("annotated_dimensions"), int(extract_accuracy.get("annotated_dimensions") or 0) >= min_gold_dims),
+        metric("extraction sign_reversals", 0, extract_accuracy.get("sign_reversals"), bool(extract_accuracy) and (extract_accuracy.get("sign_reversals") or 0) == 0),
+    ]
+
+
+def build_trend_metrics(history_readiness: dict[str, Any]) -> list[dict[str, Any]]:
+    """Time-series gate. Enforced only in the production_trend profile, i.e. once
+    >=4 real weekly scans exist. In production_v1 (first weeks) history_readiness may be
+    'insufficient_history' without blocking acceptance."""
+    return [
         metric("history readiness for trend", "ready", history_readiness.get("status"), history_readiness.get("status") == "ready"),
     ]
 
@@ -235,7 +271,9 @@ def main_causes(failed: list[dict[str, Any]]) -> list[str]:
     if "history_readiness.json" in names or "history readiness status" in names:
         causes.append("P6 history readiness generation is incomplete; rerun the history readiness step after handoff export.")
     if "history readiness for trend" in names:
-        causes.append("Trend production readiness requires at least 4 real weekly scans; current single-scan runs remain valid for coverage/extraction but cannot prove time-series stability.")
+        causes.append("Time-series trend gate failed: production_trend requires at least 4 real weekly scans. This does NOT block production_v1; current single-/few-scan runs remain valid for coverage/extraction. Re-run with --quality-profile production for v1 acceptance.")
+    if "extraction accuracy gate" in names or "extraction gold sample size" in names or "extraction sign_reversals" in names:
+        causes.append("Extraction accuracy gate failed or ran on too few labeled gold dimensions; run scripts/check_extract_accuracy.py against the human-labeled (private) gold file and write extract_accuracy.json into the diagnostics dir before production acceptance.")
     if "visual_pack.json" in names or "visual pack status" in names:
         causes.append("P7 visual pack generation is incomplete; rerun the visual export step after history readiness.")
     if "full_text_recovery_report.json" in names or "full-text recovery production flag" in names:
@@ -245,7 +283,7 @@ def main_causes(failed: list[dict[str, Any]]) -> list[str]:
     return causes or ["No failed metrics."]
 
 
-def build_quality_warnings(coverage_summary: dict[str, Any], extraction_summary: dict[str, Any]) -> list[str]:
+def build_quality_warnings(coverage_summary: dict[str, Any], extraction_summary: dict[str, Any], extract_accuracy: dict[str, Any] | None = None) -> list[str]:
     warnings: list[str] = []
     quality = extraction_summary.get("quality", {})
     written_count = int(extraction_summary.get("written_count") or 0)
@@ -286,6 +324,12 @@ def build_quality_warnings(coverage_summary: dict[str, Any], extraction_summary:
                 empty_categorical_dims.append(f"{role}.{dim_key}")
     if empty_categorical_dims:
         warnings.append(f"No categorical selections were extracted for dimensions: {', '.join(empty_categorical_dims)}.")
+
+    if extract_accuracy is not None:
+        if not extract_accuracy:
+            warnings.append("Extraction accuracy gate has not been run; production acceptance will fail until extract_accuracy.json exists in the diagnostics dir.")
+        elif extract_accuracy.get("ready") is not True:
+            warnings.append(f"Extraction accuracy gate is not passing (ordinal_accuracy={extract_accuracy.get('ordinal_accuracy')}, sign_reversals={extract_accuracy.get('sign_reversals')}, model_version={extract_accuracy.get('model_version')}).")
 
     return warnings
 
@@ -369,7 +413,8 @@ def render_markdown(result: dict[str, Any]) -> str:
         f"Passed: **{'yes' if result['passed'] else 'no'}**",
         f"Quality profile: `{result.get('quality_profile', 'sample')}`",
         f"Engineering ready: **{'yes' if result.get('engineering_ready') else 'no'}**",
-        f"Production ready: **{'yes' if result.get('production_ready') else 'no'}**",
+        f"Production_v1 ready: **{'yes' if result.get('production_ready') else 'no'}**",
+        f"Trend ready: **{'yes' if result.get('trend_ready') else 'no'}** (module {'enabled' if result.get('trend_enabled') else 'not enabled: ' + str(result.get('history_status'))})",
         "",
         "## Metrics",
         "",
@@ -409,7 +454,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--db-path", default="~/macro-strategy/analyst_views.db")
     parser.add_argument("--min-teams", type=int, default=10)
     parser.add_argument("--min-extracted", type=int, default=5)
-    parser.add_argument("--quality-profile", choices=["sample", "production"], default="sample")
+    parser.add_argument("--quality-profile", choices=["sample", "production", "production_trend"], default="sample", help="sample=engineering proof; production=production_v1 (coverage+full-text+source+extraction accuracy, no trend gate); production_trend=production_v1 plus the time-series gate (use only after >=4 weekly scans).")
+    parser.add_argument("--min-gold-dims", type=int, default=8, help="Minimum human-labeled gold dimensions required for the production extraction-accuracy gate (rejects seed-only runs).")
     return parser.parse_args()
 
 

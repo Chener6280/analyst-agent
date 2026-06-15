@@ -8,6 +8,7 @@ from core.retrieval.wechat_provider_preflight import (
     build_wechat_provider_preflight,
     check_dajiala,
     check_wewe,
+    provider_issues,
     render_wechat_provider_preflight,
     resolve_accounts_path,
 )
@@ -84,6 +85,18 @@ def test_check_wewe_distinguishes_empty_feed(monkeypatch) -> None:
     assert result["in_window_count"] == 0
 
 
+def test_provider_issues_flag_empty_wewe_without_dajiala() -> None:
+    issues = provider_issues(
+        {"configured": False},
+        {"configured": True, "ok": True, "item_count": 0, "in_window_count": 0},
+        ready=False,
+    )
+
+    assert "wewe_empty_feed" in issues
+    assert "empty_wewe_without_dajiala" in issues
+    assert "no_provider_window_articles" in issues
+
+
 def test_build_preflight_marks_ready_from_dajiala_and_warns_empty_wewe(tmp_path, monkeypatch) -> None:
     accounts = {
         "一瑜中的": {
@@ -109,8 +122,13 @@ def test_build_preflight_marks_ready_from_dajiala_and_warns_empty_wewe(tmp_path,
     by_account = {row["account"]: row for row in result["accounts"]}
     assert by_account["一瑜中的"]["ready"] is True
     assert by_account["一瑜中的"]["dajiala"]["in_window_count"] == 1
-    assert "wewe_no_window_articles" in by_account["一瑜中的"]["issues"]
+    assert "wewe_empty_feed" in by_account["一瑜中的"]["issues"]
     assert by_account["华创证券研究"]["ready"] is False
+    assert result["summary"]["wewe_empty_feed"] == 1
+    assert result["summary"]["dual_configured"] == 1
+    assert result["summary"]["missing_dajiala_name"] == 1
+    assert result["summary"]["missing_wewe_mp_id"] == 1
+    assert result["summary"]["dual_with_window_articles"] == 0
     assert result["summary"]["team_ready"] == 1
     assert result["summary"]["team_not_ready"] == 0
     assert "一瑜中的" in render_wechat_provider_preflight(result)

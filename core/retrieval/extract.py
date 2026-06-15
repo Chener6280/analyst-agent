@@ -77,6 +77,8 @@ def extract_team_stance(scan_id: str, team: dict[str, Any], *, model_version: st
     source_texts: dict[str, str] = {}
     sources: list[dict[str, Any]] = []
     for source in team.get("sources", []):
+        if not is_extractable_source(source):
+            continue
         content_path = source.get("content_path")
         if not content_path:
             continue
@@ -121,6 +123,11 @@ def extract_team_stance(scan_id: str, team: dict[str, Any], *, model_version: st
         "sources": sources,
     }
     return doc, source_texts
+
+
+def is_extractable_source(source: dict[str, Any]) -> bool:
+    text_access = source.get("text_access")
+    return text_access in {None, "", "full_text", "partial_text"}
 
 
 def extract_dimensions(role: str, text: str, source_texts: dict[str, str]) -> dict[str, dict[str, Any]]:

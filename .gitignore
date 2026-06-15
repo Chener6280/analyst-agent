@@ -9,3 +9,8 @@ __pycache__/
 *.pem
 outputs/*
 !outputs/.gitkeep
+
+# Human-labeled gold with article bodies stays local (copyright; public repo).
+# Point the accuracy gate at it via --gold or EXTRACTION_GOLD_PATH.
+tests/gold/*.private.jsonl
+tests/gold/*.local.jsonl

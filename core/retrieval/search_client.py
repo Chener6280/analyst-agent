@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import importlib
+import json
 import os
+import shlex
+import subprocess
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -63,7 +66,16 @@ def search_team(team: dict[str, Any], window: dict[str, Any], sources: list[str]
 
     hits: list[dict[str, Any]] = list(manual_hits)
     diagnostics: list[dict[str, Any]] = list(manual_diagnostics)
+    if "wechat_opencli" in external_sources:
+        result = _run_wechat_accounts(team, window)
+        if result is not None:
+            hits.extend(result.get("hits", []))
+            diagnostics.extend(result.get("diagnostics", []))
+            external_sources = [source for source in external_sources if source != "wechat_opencli"]
+
     for text in queries:
+        if not external_sources:
+            break
         result = _run_query(backend, text, window, external_sources)
         for hit in result.get("hits", []):
             hit.setdefault("query", text)
@@ -89,6 +101,161 @@ def build_queries(team: dict[str, Any]) -> list[str]:
     for account in team.get("official_accounts", []):
         queries.append(f"{account} {institution}")
     return _dedupe_text(queries)
+
+
+def _run_wechat_accounts(team: dict[str, Any], window: dict[str, Any]) -> dict[str, Any] | None:
+    command = os.environ.get("WECHAT_OPENCLI_COMMAND")
+    if not command:
+        return None
+    base_cmd = _validated_wechat_opencli_command(command)
+    if base_cmd is None:
+        return {
+            "hits": [],
+            "diagnostics": [
+                {
+                    "source": "wechat_opencli",
+                    "ok": False,
+                    "adapter_mode": "live",
+                    "error": "WECHAT_OPENCLI_COMMAND must invoke gzh_fetch.py",
+                    "n_results": 0,
+                }
+            ],
+        }
+    try:
+        timeout = _wechat_opencli_timeout()
+    except ValueError as exc:
+        return {
+            "hits": [],
+            "diagnostics": [
+                {
+                    "source": "wechat_opencli",
+                    "ok": False,
+                    "adapter_mode": "live",
+                    "error": str(exc),
+                    "n_results": 0,
+                }
+            ],
+        }
+    accounts = [account for account in team.get("official_accounts", []) if account]
+    if not accounts:
+        return None
+
+    hits: list[dict[str, Any]] = []
+    diagnostics: list[dict[str, Any]] = []
+    for account in accounts:
+        started = datetime.now(timezone.utc)
+        cmd = list(base_cmd)
+        cmd.extend(["--account", account, "--start", window["start"], "--end", window["end"], "--fulltext"])
+        if "--opencli" not in cmd:
+            cmd.append("--opencli")
+        try:
+            completed = subprocess.run(
+                cmd,
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+            rows = json.loads(completed.stdout)
+            if isinstance(rows, dict):
+                rows = rows.get("articles", [])
+            if not isinstance(rows, list):
+                raise ValueError("gzh_fetch stdout must be a JSON list or object with articles")
+            account_hits = [_gzh_row_to_hit(row, account) for row in rows if isinstance(row, dict) and row.get("title") and row.get("url")]
+            hits.extend(account_hits)
+            diagnostics.append(
+                {
+                    "source": "wechat_opencli",
+                    "ok": bool(account_hits),
+                    "adapter_mode": "live",
+                    "error": None if account_hits else f"gzh_fetch returned no valid rows for account={account}",
+                    "n_results": len(account_hits),
+                    "elapsed_ms": int((datetime.now(timezone.utc) - started).total_seconds() * 1000),
+                    "cache_hit": False,
+                }
+            )
+        except Exception as exc:
+            diagnostics.append(
+                {
+                    "source": "wechat_opencli",
+                    "ok": False,
+                    "adapter_mode": "live",
+                    "error": f"gzh_fetch account fetch failed for account={account}: {exc}",
+                    "n_results": 0,
+                    "elapsed_ms": int((datetime.now(timezone.utc) - started).total_seconds() * 1000),
+                    "cache_hit": False,
+                }
+            )
+
+    return {"hits": hits, "diagnostics": diagnostics}
+
+
+def _validated_wechat_opencli_command(command: str) -> list[str] | None:
+    try:
+        parts = shlex.split(command)
+    except ValueError:
+        return None
+    if not parts:
+        return None
+    if not any(Path(part).name == "gzh_fetch.py" for part in parts):
+        return None
+    executable = Path(parts[0]).name
+    if executable not in {"python", "python3", "gzh_fetch.py"} and not executable.startswith("python3."):
+        return None
+    return parts
+
+
+def _wechat_opencli_timeout() -> int:
+    value = os.environ.get("WECHAT_OPENCLI_TIMEOUT", "60")
+    try:
+        timeout = int(value)
+    except ValueError as exc:
+        raise ValueError(f"WECHAT_OPENCLI_TIMEOUT must be an integer, got {value!r}") from exc
+    if timeout <= 0:
+        raise ValueError("WECHAT_OPENCLI_TIMEOUT must be positive")
+    return timeout
+
+
+def _gzh_row_to_hit(row: dict[str, Any], account: str) -> dict[str, Any]:
+    account_name = row.get("account_name") or account
+    canonical_url = _canonicalize_url(row.get("url") or "")
+    found_in = row.get("found_in") or row.get("source")
+    extra = {
+        "platform": "wechat",
+        "account_name": account_name,
+        "extraction_method": "gzh_crosscheck",
+        "requires_login": False,
+        "canonical_url": canonical_url,
+        "tier": "MEDIA",
+        "evidence_type": "opinion",
+        "matched_entities": [],
+        "found_by": ["wechat_opencli"],
+        "content": row.get("content") or "",
+        "content_source": row.get("content_source"),
+        "content_errors": row.get("content_errors"),
+        "found_in": found_in,
+        "url_key": row.get("url_key"),
+        "source_type": "official_wechat",
+        "source_completeness": "full_article" if len(row.get("content") or "") >= 1200 else "excerpt",
+    }
+    return {
+        "title": row.get("title") or "",
+        "url": row.get("url") or "",
+        "canonical_url": canonical_url,
+        "snippet": row.get("snippet") or "",
+        "source": "wechat_opencli",
+        "tier": "MEDIA",
+        "evidence_type": "opinion",
+        "matched_entities": [],
+        "found_by": ["wechat_opencli"],
+        "published_at": row.get("published_at"),
+        "fetched_at": datetime.now(timezone.utc).isoformat(),
+        "raw_score": None,
+        "rank_score": None,
+        "extra": extra,
+        "adapter_mode": "live",
+        "query": account_name,
+    }
 
 
 def _load_ir_search() -> Any | None:
