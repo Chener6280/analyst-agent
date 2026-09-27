@@ -1,0 +1,51 @@
+.company-tabs { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
+.company-tab { display: inline-flex; align-items: center; gap: 9px; min-width: 132px; margin-bottom: -1px; padding: 11px 16px; border: 1px solid transparent; border-bottom: 2px solid transparent; background: transparent; color: #aeb7c1; cursor: pointer; font-size: .82rem; font-weight: 700; }
+.company-tab:hover { color: var(--text); background: var(--surface-2); }
+.company-tab[aria-selected="true"] { color: var(--orange); background: var(--orange-soft); border-color: rgba(255,158,27,.25); border-bottom-color: var(--orange); }
+.company-tab small { color: var(--faint); font: .58rem "SFMono-Regular", Consolas, monospace; letter-spacing: .06em; text-transform: uppercase; }
+.company-dot { width: 6px; height: 6px; border-radius: 50%; background: #43505f; }
+.company-dot.ready { background: var(--green); }
+.company-dot.partial, .company-dot.demo { background: var(--yellow); }
+.company-dot.unavailable { background: var(--red); }
+
+.company-section { min-width: 0; min-height: 150px; display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid var(--line); background: var(--surface); }
+.company-section header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.company-section strong { font-size: .81rem; }
+.company-section p { margin: 0; color: var(--muted); font-size: .64rem; line-height: 1.6; }
+.company-section .company-empty { color: var(--faint); }
+.company-sources { margin: auto 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+.company-sources li { padding: 4px 7px; border: 1px solid var(--line); background: #0a0f15; color: #c4ccd5; font: .6rem "SFMono-Regular", Consolas, monospace; overflow-wrap: anywhere; }
+.company-sources li.issuer { border-style: dashed; color: var(--muted); }
+.company-action { align-self: flex-start; margin-top: auto; }
+
+.company-coverage { margin-top: 12px; padding: 11px 14px; border: 1px solid var(--line); background: var(--surface); }
+.company-coverage summary { cursor: pointer; color: var(--muted); font-size: .68rem; }
+.company-coverage td { overflow-wrap: anywhere; }
+.company-coverage ul { margin: 0; padding-left: 16px; }
+.company-coverage li + li { margin-top: 3px; }
+.company-coverage small { color: var(--faint); }
+
+/* A股行业面板：仿 Data Center 数据引擎的可折叠盒。 */
+.industry-panel { display: flex; flex-direction: column; gap: 12px; }
+.industry-group { border: 1px solid #252e39; background: #0d1219; }
+.industry-group > summary { min-height: 39px; padding: 10px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 16px; list-style: none; font-size: 12px; }
+.industry-group > summary::-webkit-details-marker { display: none; }
+.industry-group > summary::after { content: '⌄'; color: #677688; transition: transform .15s; }
+.industry-group[open] > summary::after { transform: rotate(180deg); }
+.industry-group > summary:hover { background: #101720; }
+.industry-group-name { color: #c7d0da; font-weight: 650; }
+.industry-group-count { font: 9px ui-monospace, monospace; color: #677688; letter-spacing: .12em; }
+.industry-group-body { border-top: 1px solid #202a36; padding: 8px; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; align-items: start; }
+
+.industry-sub { border: 1px solid #202a36; background: #0a0f15; }
+.industry-sub > summary { padding: 7px 11px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 12px; list-style: none; font-size: 11px; color: #9fb0c0; }
+.industry-sub > summary::-webkit-details-marker { display: none; }
+.industry-sub > summary::after { content: '⌄'; color: #55636f; font-size: 10px; }
+.industry-sub[open] > summary::after { transform: rotate(180deg); }
+.industry-sub > summary:hover { background: #0f1520; color: #d3dbe4; }
+.industry-sub-hint { font: 9px ui-monospace, monospace; color: #55636f; }
+.industry-matrix { width: 100%; border-collapse: collapse; margin: 2px 0 6px; }
+.industry-matrix th, .industry-matrix td { padding: 5px 8px; border-top: 1px solid #1c242e; font-size: 11px; text-align: left; }
+.industry-matrix thead th { color: #67768a; font-weight: 500; font-size: 10px; border-top: 0; }
+.industry-matrix tbody th { color: #b9c3ce; font-weight: 500; white-space: nowrap; }
+.industry-matrix td { color: #55636f; text-align: center; }

@@ -1,0 +1,11 @@
+node_modules/
+release/
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+local-data/
+.runtime/
+.local/
+__pycache__/

@@ -1,0 +1,88 @@
+{
+  "name": "ir-system",
+  "productName": "IR System",
+  "version": "0.1.0",
+  "description": "Local-first, cross-asset investment research desktop workspace.",
+  "author": "IR System",
+  "private": true,
+  "main": "src/main/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "postinstall": "node scripts/prepare-terminal.cjs",
+    "start": "electron .",
+    "dev": "electron .",
+    "zsxq-web": "node adapters/zsxq_web/cli.js",
+    "test": "node --test tests/*.test.js",
+    "check": "node --check src/main/index.js && node --check src/main/provider-registry.js && node --check src/main/providers/demo-provider.js && node --check src/main/providers/subprocess-provider.js && node --check src/preload/index.js && node --check src/renderer/app.js && node --check src/renderer/source-center.js && node --check src/renderer/companies.js && node --check adapters/zsxq_web/cli.js && node --check adapters/zsxq_web/core.js && node --check adapters/zsxq_web/browser.js && node --check adapters/zsxq_web/archive.js && npm test",
+    "test:sync-ui": "node tests/electron-source-controls-smoke.cjs",
+    "test:pi-offline": "node tests/pi-offline-smoke.cjs",
+    "pack": "electron-builder --dir --publish never",
+    "dist": "electron-builder --publish never",
+    "dist:mac": "electron-builder --mac dmg zip --publish never",
+    "dist:win": "electron-builder --win nsis portable --publish never",
+    "dist:linux": "electron-builder --linux AppImage deb --publish never"
+  },
+  "bin": {
+    "zsxq-web": "adapters/zsxq_web/cli.js"
+  },
+  "devDependencies": {
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "beforePack": "scripts/build-ima-client.cjs",
+    "afterSign": "scripts/verify-mac-signature.cjs",
+    "appId": "com.irsystem.desktop",
+    "productName": "IR System",
+    "asar": true,
+    "asarUnpack": ["node_modules/node-pty/**"],
+    "files": [
+      "src/**/*",
+      "contracts/**/*",
+      "resources/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {"from":"docs","to":"docs","filter":["**/*.md"]},
+      {
+        "from": "adapters",
+        "to": "adapters",
+        "filter": [
+          "**/*",
+          "!**/__pycache__/**",
+          "!**/*.pyc"
+        ]
+      }
+    ],
+    "mac": {
+      "identity": "-",
+      "category": "public.app-category.finance",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "linux": {
+      "category": "Office",
+      "target": [
+        "AppImage",
+        "deb"
+      ]
+    },
+    "directories": {
+      "output": "release"
+    }
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "0.11.0",
+    "@xterm/xterm": "6.0.0",
+    "node-pty": "1.1.0",
+    "playwright-core": "^1.63.0"
+  }
+}

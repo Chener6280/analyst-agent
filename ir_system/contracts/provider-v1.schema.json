@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ir-system.local/contracts/provider-v1.schema.json",
+  "title": "IR System Provider Protocol v1",
+  "type": "object",
+  "required": ["protocol", "ok"],
+  "properties": {
+    "protocol": { "const": "ir-system-provider/v1" },
+    "ok": { "type": "boolean" },
+    "result": {
+      "anyOf": [{
+      "type": "object",
+      "required": ["provider", "status", "fetchedAt", "modules"],
+      "properties": {
+        "provider": { "type": "string" },
+        "status": { "enum": ["ready", "partial", "unavailable"] },
+        "fetchedAt": { "type": "string" },
+        "modules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "status"],
+            "properties": {
+              "id": { "type": "string" },
+              "label": { "type": "string" },
+              "status": { "enum": ["ready", "partial", "unavailable", "planned", "local", "demo"] },
+              "summary": { "type": "string" },
+              "details": { "type": "object" }
+            },
+            "additionalProperties": true
+          }
+        },
+        "diagnostics": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+      }, {
+        "type": "object",
+        "required": ["archiveSchemaVersion"],
+        "properties": { "archiveSchemaVersion": { "const": 1 } },
+        "additionalProperties": true
+      }]
+    },
+    "error": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "type": "string" },
+        "message": { "type": "string" }
+      }
+    }
+  },
+  "additionalProperties": false
+}

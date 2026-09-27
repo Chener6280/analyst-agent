@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#07090c" />
+    <meta name="description" content="IR System — local-first investment research desktop workspace" />
+    <title>IR System</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./data-center.css" />
+    <link rel="stylesheet" href="./companies.css" />
+    <link rel="stylesheet" href="../../node_modules/@xterm/xterm/css/xterm.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <span class="brand-mark">IR</span>
+          <div>
+            <div class="brand-name">IR SYSTEM</div>
+            <div class="brand-subtitle">LOCAL RESEARCH TERMINAL</div>
+          </div>
+        </div>
+        <button id="command-trigger" class="command-bar" type="button" aria-label="打开全局导航">
+          <span class="command-prefix">⌕</span>
+          <span class="command-placeholder">搜索模块、资产、公司或研究资料</span>
+          <span class="command-key">⌘ K</span>
+        </button>
+        <div class="system-strip">
+          <div id="world-clocks" class="world-clocks" aria-label="世界时钟"></div>
+        </div>
+      </header>
+
+      <aside class="sidebar">
+        <nav id="main-navigation" aria-label="主导航"></nav>
+      </aside>
+
+      <main id="workspace" class="workspace" tabindex="-1">
+        <section class="loading-state"><span class="loading-mark">IR</span><p>正在启动本地工作台…</p></section>
+      </main>
+
+      <footer class="statusbar">
+        <span><b>⌘K</b> NAVIGATE</span>
+        <span><b>ESC</b> CLOSE</span>
+        <span class="status-spacer"></span>
+        <span id="footer-provider">PROVIDER: —</span>
+        <span id="footer-mode">MODE: —</span>
+        <span class="footer-mode">LOCAL-FIRST · EXPLICIT SYNC</span>
+      </footer>
+    </div>
+
+    <dialog id="command-palette" class="command-dialog">
+      <div class="command-dialog-inner">
+        <label class="command-search">
+          <span>⌕</span>
+          <input id="command-input" type="search" placeholder="输入模块或页面名称…" autocomplete="off" />
+          <kbd>ESC</kbd>
+        </label>
+        <div id="command-results" class="command-results"></div>
+      </div>
+    </dialog>
+
+    <script src="./app.js"></script>
+    <script src="../shared/dates.js"></script>
+    <script src="../shared/sources.js"></script>
+    <script src="../shared/update-activity.js"></script>
+    <script src="../../node_modules/@xterm/xterm/lib/xterm.js"></script>
+    <script src="../../node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
+    <script src="./terminal.js"></script>
+    <script src="./source-center.js"></script>
+    <script src="../shared/company-markets.js"></script>
+    <script src="../shared/company-industries.js"></script>
+    <script src="./company-industries.js"></script>
+    <script src="./companies.js"></script>
+    <script src="./equities.js"></script>
+  </body>
+</html>

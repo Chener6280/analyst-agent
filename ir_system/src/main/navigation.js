@@ -1,0 +1,95 @@
+const NAVIGATION = Object.freeze([
+  { id: "overview", label: "Overview", code: "01", group: "workspace" },
+  {
+    id: "macro",
+    label: "Macro",
+    code: "02",
+    group: "research",
+    children: [
+      ["macro-dashboard", "Dashboard"],
+      ["macro-regions", "China / US / Global"],
+      ["macro-cycle", "Growth & Inflation"],
+      ["macro-policy", "Policy & Liquidity"],
+      ["macro-assets", "Macro → Asset"],
+      ["macro-industry", "Macro → Industry"],
+    ],
+  },
+  { id: "sector", label: "Sector", code: "03", group: "research", children: [] },
+  {
+    id: "companies",
+    label: "Companies",
+    code: "04",
+    group: "research",
+    children: [
+      ["companies-a-share", "A股"],
+      ["companies-hk", "港股"],
+      ["companies-us", "美股"],
+    ],
+  },
+  {
+    id: "eq",
+    label: "Equities",
+    code: "05",
+    group: "markets",
+    children: [
+      ["eq-futures", "Futures"],
+      ["eq-options", "Options"],
+    ],
+  },
+  {
+    id: "fi",
+    label: "Fixed Income",
+    code: "06",
+    group: "markets",
+    children: [
+      ["fi-rates", "Rates & Curves"],
+      ["fi-credit", "Credit"],
+      ["fi-securities", "Bonds"],
+      ["fi-funds", "Funds & ETFs"],
+      ["fi-derivatives", "Futures / Swaps / Options"],
+    ],
+  },
+  {
+    id: "fx",
+    label: "FX",
+    code: "07",
+    group: "markets",
+    children: [
+      ["fx-spot", "Spot"],
+      ["fx-forwards", "Forwards & Swaps"],
+      ["fx-options", "Options"],
+      ["fx-funds", "Funds & ETFs"],
+    ],
+  },
+  {
+    id: "comdty",
+    label: "Comdty",
+    code: "08",
+    group: "markets",
+    children: [],
+  },
+  {
+    id: "research",
+    label: "Research",
+    code: "09",
+    group: "intelligence",
+    children: [
+      ["research-daily", "Daily Briefs"],
+      ["research-macro", "Macro & Strategy"],
+      ["research-industry", "Industry Research"],
+      ["research-company", "Company Research"],
+      ["research-calls", "Calls & Transcripts"],
+      ["research-policy", "Policy & Archives"],
+      ["research-charts", "Charts"],
+      ["research-library", "My Library"],
+    ],
+  },
+  { id: "calendar", label: "Calendar", code: "10", group: "intelligence" },
+  { id: "watchlists", label: "Watchlists", code: "11", group: "personal" },
+  { id: "data", label: "Data Center", code: "12", group: "system" },
+].map((item) => ({
+  ...item,
+  children: (item.children || []).map(([id, label]) => ({ id, label })),
+})));
+
+module.exports = { NAVIGATION };
