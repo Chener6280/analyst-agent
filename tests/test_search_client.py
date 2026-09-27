@@ -87,6 +87,28 @@ def test_run_wechat_accounts_calls_gzh_fetch_with_explicit_account(monkeypatch) 
     assert "--fulltext" in calls[0]
 
 
+def test_run_wechat_accounts_overrides_stale_accounts_path(monkeypatch) -> None:
+    calls = []
+
+    def fake_run(cmd, check, capture_output, text, timeout):
+        calls.append(cmd)
+        return SimpleNamespace(stdout="[]")
+
+    monkeypatch.setenv("WECHAT_OPENCLI_COMMAND", "python3 /tmp/gzh_fetch.py --accounts /tmp/stale.json --opencli")
+    monkeypatch.setenv("WECHAT_ACCOUNTS_PATH", "/Users/chen/Documents/ir_search/accounts.json")
+    monkeypatch.setattr("subprocess.run", fake_run)
+
+    _run_wechat_accounts(
+        {"official_accounts": ["一瑜中的"]},
+        {"start": "2026-06-08", "end": "2026-06-14"},
+    )
+
+    assert "--accounts" in calls[0]
+    idx = calls[0].index("--accounts")
+    assert calls[0][idx + 1] == "/Users/chen/Documents/ir_search/accounts.json"
+    assert "/tmp/stale.json" not in calls[0]
+
+
 def test_run_wechat_accounts_rejects_non_gzh_command(monkeypatch) -> None:
     monkeypatch.setenv("WECHAT_OPENCLI_COMMAND", "python3 /tmp/not_fetch.py")
 

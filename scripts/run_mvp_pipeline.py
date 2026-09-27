@@ -159,6 +159,7 @@ def build_steps(args: argparse.Namespace) -> list[list[str]]:
             output_root,
             "--db-path",
             args.db_path,
+            "--allow-missing-acceptance",
         ],
         [
             sys.executable,
@@ -204,6 +205,7 @@ def build_steps(args: argparse.Namespace) -> list[list[str]]:
             "--db-path",
             args.db_path,
         ],
+        *build_obsidian_export_steps(args, scan_id, output_root),
     ]
 
 
@@ -259,6 +261,8 @@ def build_phase1_steps(args: argparse.Namespace, output_root: str, scan_dir: str
         args.source_whitelist,
         "--source-matrix",
         args.source_matrix,
+        "--wechat-accounts",
+        args.wechat_accounts,
     ]
     if args.env_file:
         coverage_step.extend(["--env-file", args.env_file])
@@ -329,6 +333,25 @@ def should_check_wechat_dual_source(args: argparse.Namespace) -> bool:
     return "wechat_opencli" in [item.strip() for item in str(args.sources or "").split(",")]
 
 
+def build_obsidian_export_steps(args: argparse.Namespace, scan_id: str, output_root: str) -> list[list[str]]:
+    if getattr(args, "skip_obsidian_export", False):
+        return []
+    return [
+        [
+            sys.executable,
+            "scripts/export_obsidian_vault.py",
+            "--scan-id",
+            scan_id,
+            "--output-root",
+            output_root,
+            "--vault",
+            getattr(args, "obsidian_vault", None) or "~/Documents/Obsidian Vault",
+            "--obsidian-root",
+            getattr(args, "obsidian_root", None) or "Analyst Agent",
+        ]
+    ]
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run Phase 1-8 MVP pipeline with gates.")
     parser.add_argument("--start", default="2026-06-01")
@@ -359,6 +382,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--wechat-accounts", default=os.environ.get("WECHAT_ACCOUNTS_PATH", "/Users/chen/Documents/ir_search/accounts.json"))
     parser.add_argument("--gold", default=os.environ.get("EXTRACTION_GOLD_PATH", "tests/gold/extraction_gold.jsonl"), help="Gold file for the extraction accuracy gate. Point at the human-labeled private gold for production; defaults to EXTRACTION_GOLD_PATH or the committed seed file.")
     parser.add_argument("--min-accuracy", type=float, default=0.9)
+    parser.add_argument("--obsidian-vault", default=os.environ.get("OBSIDIAN_VAULT", "~/Documents/Obsidian Vault"))
+    parser.add_argument("--obsidian-root", default=os.environ.get("OBSIDIAN_EXPORT_ROOT", "Analyst Agent"))
+    parser.add_argument("--skip-obsidian-export", action="store_true", help="Skip exporting the final weekly outputs into an Obsidian vault.")
     return parser.parse_args()
 
 

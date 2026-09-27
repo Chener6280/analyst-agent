@@ -102,6 +102,7 @@ def test_pipeline_steps_use_requested_scan_output_and_db_paths(tmp_path: Path) -
     assert any("scripts/export_history_readiness.py" in step and str(tmp_path / "views.db") in step for step in flattened)
     assert any("scripts/export_visual_pack.py" in step and str(tmp_path / "views.db") in step for step in flattened)
     assert any("scripts/export_project_package.py" in step and str(tmp_path / "views.db") in step for step in flattened)
+    assert any("scripts/export_obsidian_vault.py" in step and str(tmp_path / "out") in step for step in flattened)
     assert any("scripts/check_mvp_acceptance.py" in step and str(tmp_path / "views.db") in step for step in flattened)
     assert any("scripts/check_mvp_acceptance.py" in step and "--quality-profile sample" in step for step in flattened)
     acceptance_idx = next(idx for idx, step in enumerate(flattened) if "scripts/check_mvp_acceptance.py" in step)
@@ -111,6 +112,9 @@ def test_pipeline_steps_use_requested_scan_output_and_db_paths(tmp_path: Path) -
     assert package_indices[0] < acceptance_idx < package_indices[-1]
     assert brief_indices[0] < acceptance_idx < brief_indices[-1]
     assert handoff_indices[0] < acceptance_idx < handoff_indices[-1]
+    assert "--allow-missing-acceptance" in flattened[package_indices[0]]
+    assert "--allow-missing-acceptance" not in flattened[package_indices[-1]]
+    assert "scripts/export_obsidian_vault.py" in flattened[-1]
 
 
 def test_live_pipeline_uses_coverage_and_phase2_readiness_without_manual_validation(tmp_path: Path) -> None:
@@ -156,6 +160,7 @@ def test_live_pipeline_uses_coverage_and_phase2_readiness_without_manual_validat
     assert "--mode weekly" in flattened[2]
     assert "--source-list-confirmed" in flattened[2]
     assert "--env-file /tmp/ir_search.env" in flattened[2]
+    assert "--wechat-accounts /Users/chen/Documents/ir_search/accounts.json" in flattened[2]
     assert "scripts/check_phase2_readiness.py" in flattened[3]
     assert any("scripts/check_mvp_acceptance.py" in step and "--quality-profile production" in step for step in flattened)
 
@@ -196,3 +201,38 @@ def test_live_pipeline_can_skip_wewe_prepare(tmp_path: Path) -> None:
     assert "scripts/run_coverage_check.py" in flattened[0]
     assert "--allow-single-wechat-provider" in flattened[0]
     assert "--allow-empty-wewe-feeds" in flattened[0]
+
+
+def test_pipeline_can_skip_obsidian_export(tmp_path: Path) -> None:
+    args = argparse.Namespace(
+        mode="manual",
+        start="2026-06-08",
+        end="2026-06-14",
+        run_version="v2",
+        max_teams=10,
+        analyst_list="data/analyst-list-acceptance-candidates.md",
+        retrieval_profile="manual",
+        sources="manual_wechat,wechat_opencli,bocha,exa,web_search",
+        min_teams=10,
+        min_extracted=5,
+        quality_profile="sample",
+        env_file=None,
+        articles_root=str(tmp_path / "articles"),
+        output_root=str(tmp_path / "out"),
+        db_path=str(tmp_path / "views.db"),
+        source_whitelist="data/source_whitelist.yaml",
+        source_matrix="/tmp/broker_wechat_matrix.md",
+        skip_wewe_login_prepare=False,
+        allow_single_wechat_provider=False,
+        allow_empty_wewe_feeds=False,
+        wewe_base="http://localhost:4001",
+        wewe_container="wewe-rss-ir",
+        wewe_auth_code="irsearch",
+        wewe_login_wait_seconds=0,
+        wechat_accounts="/Users/chen/Documents/ir_search/accounts.json",
+        skip_obsidian_export=True,
+    )
+
+    flattened = [" ".join(step) for step in build_steps(args)]
+
+    assert not any("scripts/export_obsidian_vault.py" in step for step in flattened)

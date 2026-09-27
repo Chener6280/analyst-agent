@@ -34,6 +34,8 @@ from scripts._env_utils import load_env_file
 def main() -> int:
     args = parse_args()
     env_file = load_env_file(args.env_file)
+    if args.wechat_accounts:
+        os.environ["WECHAT_ACCOUNTS_PATH"] = str(Path(args.wechat_accounts).expanduser())
     os.environ.setdefault("IR_SEARCH_LIVE", "1")
     window = resolve_window(args.mode, args.start, args.end, args.tz)
     scan_id = make_scan_id(window, args.mode, args.run_version)

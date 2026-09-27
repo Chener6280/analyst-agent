@@ -1,0 +1,4 @@
+interface:
+  display_name: "ZSXQ Web Archive"
+  short_description: "Archive authorized Knowledge Planet web content."
+  default_prompt: "Scan current Knowledge Planet memberships, prepare a bounded archive plan, and execute only eligible resumable web jobs."

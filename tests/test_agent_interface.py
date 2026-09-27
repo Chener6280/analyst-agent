@@ -68,6 +68,21 @@ def test_agent_handoff_exports_supported_queries_and_artifacts(tmp_path: Path) -
     assert "## Supported Queries" in text
 
 
+def test_agent_handoff_prefers_production_acceptance(tmp_path: Path) -> None:
+    scan_id, output_root, db_path = prepare_scan(tmp_path)
+    diagnostics = output_root / "diagnostics"
+    (diagnostics / f"{scan_id}__mvp_acceptance_production.json").write_text(
+        json.dumps({"passed": False, "quality_warnings": ["production gate failed"]}),
+        encoding="utf-8",
+    )
+    (diagnostics / f"{scan_id}__mvp_acceptance_production.md").write_text("# prod\n", encoding="utf-8")
+
+    handoff = build_agent_handoff(scan_id, output_root=output_root, db_path=db_path)
+
+    assert handoff["status"] == "review_required"
+    assert handoff["artifacts"]["mvp_acceptance"].endswith("__mvp_acceptance_production.md")
+
+
 def test_agent_read_api_queries_dimension_team_and_entity(tmp_path: Path) -> None:
     scan_id, _, db_path = prepare_scan(tmp_path)
 

@@ -48,6 +48,25 @@ def test_weekly_brief_builds_from_cross_section_and_quality_inputs(tmp_path: Pat
     assert "Full-text coverage is low" in text
 
 
+def test_weekly_brief_prefers_production_acceptance(tmp_path: Path) -> None:
+    scan_id = "manual-2026-06-01-2026-06-07-v1"
+    scan_dir = tmp_path / "scans" / scan_id
+    diagnostics = tmp_path / "diagnostics"
+    write_json(scan_dir / "reports" / "weekly_cross_section.json", cross_section(scan_id))
+    write_json(scan_dir / "coverage_summary.json", {"summary": {"total_teams": 10, "full_text_rate": "93%"}})
+    write_json(scan_dir / "extracted" / "extraction_summary.json", {"quality": {"documents_with_any_signal": 7}})
+    write_json(diagnostics / f"{scan_id}__mvp_acceptance.json", {"passed": True, "quality_warnings": []})
+    write_json(
+        diagnostics / f"{scan_id}__mvp_acceptance_production.json",
+        {"passed": False, "quality_warnings": ["production gate failed"]},
+    )
+
+    brief = build_brief(scan_dir, diagnostics_dir=diagnostics)
+
+    assert brief["quality"]["acceptance_passed"] is False
+    assert brief["quality"]["quality_warnings"] == ["production gate failed"]
+
+
 def test_weekly_brief_requires_stance_rows(tmp_path: Path) -> None:
     scan_id = "empty"
     scan_dir = tmp_path / "scans" / scan_id

@@ -11,6 +11,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from core.package.delivery import scan_acceptance_paths
 from core.schema.stance import MACRO_DIMENSIONS, STRATEGY_DIMENSIONS
 
 
@@ -43,9 +44,8 @@ def build_brief(scan_dir: Path, *, diagnostics_dir: Path) -> dict[str, Any]:
     coverage = read_json(scan_dir / "coverage_summary.json")
     extraction = read_json(scan_dir / "extracted" / "extraction_summary.json")
     scan_id = cross_section.get("scan_id") or scan_dir.name
-    acceptance = read_json(diagnostics_dir / f"{scan_id}__mvp_acceptance.json") or read_json(
-        diagnostics_dir / "mvp_acceptance.json"
-    )
+    acceptance_paths = scan_acceptance_paths(diagnostics_dir, scan_id)
+    acceptance = read_json(acceptance_paths["json"])
 
     db_counts = cross_section.get("db_counts") or {}
     if int(db_counts.get("stance") or 0) <= 0:
@@ -70,7 +70,7 @@ def build_brief(scan_dir: Path, *, diagnostics_dir: Path) -> dict[str, Any]:
             "cross_section": str(scan_dir / "reports" / "weekly_cross_section.json"),
             "coverage": str(scan_dir / "coverage_summary.json"),
             "extraction": str(scan_dir / "extracted" / "extraction_summary.json"),
-            "acceptance": str(diagnostics_dir / f"{scan_id}__mvp_acceptance.json"),
+            "acceptance": str(acceptance_paths["json"]),
         },
         "db_counts": db_counts,
         "headline": build_headline(macro, strategy_ordinals, quality),
@@ -148,8 +148,10 @@ def build_quality_banner(coverage_summary: dict[str, Any], extraction_quality: d
     full_text_rate = parse_percent(coverage_summary.get("full_text_rate"))
     official_rate = parse_percent(coverage_summary.get("official_or_broker_source_rate"))
     zero_signal = extraction_quality.get("zero_signal_documents") or []
-    if full_text_rate < 0.5 or official_rate < 0.7 or zero_signal:
-        return "数据质量提示：本周结果为 sample MVP 输出。全文覆盖率低，部分来源为转载或研报平台，当前结果不应作为正式投研结论。"
+    if full_text_rate < 0.5 or official_rate < 0.7:
+        return "数据质量提示：本周结果为 sample MVP 输出。全文覆盖率或来源质量未达 production profile，当前结果不应作为正式投研结论。"
+    if zero_signal:
+        return "数据质量提示：本周全文覆盖和来源质量达标，但仍有少数文档未抽出有效观点；请结合质量警告审阅。"
     return "数据质量提示：当前样本满足 production profile 的主要来源质量阈值。"
 
 

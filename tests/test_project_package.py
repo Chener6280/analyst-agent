@@ -65,6 +65,35 @@ def test_project_package_does_not_reuse_global_acceptance_for_different_scan(tmp
     assert manifest["status"] == "incomplete"
 
 
+def test_project_package_can_stage_before_acceptance(tmp_path: Path) -> None:
+    scan_id, output_root, db_path = prepare_visual_inputs(tmp_path)
+    visual_pack = build_visual_pack(scan_id, output_root=output_root, db_path=db_path)
+    reports_dir = output_root / "scans" / scan_id / "reports"
+    (output_root / "diagnostics" / f"{scan_id}__mvp_acceptance.json").unlink(missing_ok=True)
+    (output_root / "diagnostics" / f"{scan_id}__mvp_acceptance.md").unlink(missing_ok=True)
+    (output_root / "scans" / scan_id / "coverage_report.md").write_text("# coverage\n", encoding="utf-8")
+    (output_root / "scans" / scan_id / "source_links.md").write_text("# links\n", encoding="utf-8")
+    (output_root / "scans" / scan_id / "source_links.csv").write_text("url\nhttps://example.com\n", encoding="utf-8")
+    (output_root / "scans" / scan_id / "source_links.json").write_text(json.dumps({"links": []}), encoding="utf-8")
+    (reports_dir / "visual_pack.json").write_text(json.dumps(visual_pack), encoding="utf-8")
+    (reports_dir / "visual_pack.md").write_text("# visual pack\n", encoding="utf-8")
+    (reports_dir / "full_text_recovery_report.json").write_text(json.dumps({"production_ready": False}), encoding="utf-8")
+    (reports_dir / "full_text_recovery_report.md").write_text("# recovery\n", encoding="utf-8")
+    (reports_dir / "agent_handoff.json").write_text(json.dumps({"status": "ready"}), encoding="utf-8")
+    (reports_dir / "agent_handoff.md").write_text("# handoff\n", encoding="utf-8")
+
+    manifest = build_project_package(
+        scan_id,
+        output_root=output_root,
+        db_path=db_path,
+        repo_root=Path.cwd(),
+        allow_missing_acceptance=True,
+    )
+
+    assert manifest["acceptance_passed"] is None
+    assert manifest["status"] == "review_required"
+
+
 def test_project_package_uses_production_acceptance_when_present(tmp_path: Path) -> None:
     scan_id, output_root, db_path = prepare_visual_inputs(tmp_path)
     visual_pack = build_visual_pack(scan_id, output_root=output_root, db_path=db_path)

@@ -211,6 +211,38 @@ with weekly conclusions, macro/strategy tables, data-quality notes, and an
 evidence appendix with source links and source types. It does not call an LLM
 or the network.
 
+## Obsidian Export
+
+After the weekly reports are available, export the scan into an Obsidian vault:
+
+```bash
+python3 scripts/export_obsidian_vault.py \
+  --scan-id manual-2026-06-01-2026-06-07-v1 \
+  --vault "~/Documents/Obsidian Vault"
+```
+
+Outputs:
+
+```text
+~/Documents/Obsidian Vault/Analyst Agent/Analyst Agent Home.md
+~/Documents/Obsidian Vault/Analyst Agent/Weekly/{iso_week}/{iso_week} 周报.md
+~/Documents/Obsidian Vault/Analyst Agent/Weekly/{iso_week}/{iso_week} 机构观点索引.md
+~/Documents/Obsidian Vault/Analyst Agent/Weekly/{iso_week}/{iso_week} 主题索引.md
+~/Documents/Obsidian Vault/Analyst Agent/Weekly/{iso_week}/{iso_week} 来源链接.md
+~/Documents/Obsidian Vault/Analyst Agent/Institutions/*.md
+~/Documents/Obsidian Vault/Analyst Agent/Topics/*.md
+~/macro-strategy/scans/{scan_id}/reports/obsidian_export.json
+```
+
+The export is deterministic and local-only. It turns `weekly_brief.json`,
+`weekly_cross_section.json`, extracted stance JSON, source links, and chart SVGs
+into Obsidian-friendly Markdown notes with wiki links between weeks,
+institutions, topics, and original WeChat source URLs.
+
+`run_mvp_pipeline.py` runs this export by default at the end of a full pipeline.
+Use `--obsidian-vault`, `--obsidian-root`, or `--skip-obsidian-export` to change
+that behavior.
+
 ## Agent Read Interface
 
 After the weekly brief is available, export the P5 handoff package:

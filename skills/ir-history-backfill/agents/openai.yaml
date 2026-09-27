@@ -1,0 +1,4 @@
+interface:
+  display_name: "IR History Backfill"
+  short_description: "Archive bounded research-source history locally"
+  default_prompt: "Use $ir-history-backfill to archive selected historical research sources with checkpoints and coverage diagnostics."

@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from core.package.delivery import scan_acceptance_paths
 from core.schema.stance import dimensions_for_role
 from core.store.db import connect
 from core.store.queries import (
@@ -30,9 +31,8 @@ def build_agent_handoff(
     reports_dir = scan_dir / "reports"
     brief = read_required_json(reports_dir / "weekly_brief.json")
     cross_section = read_required_json(reports_dir / "weekly_cross_section.json")
-    acceptance = read_json(output_dir / "diagnostics" / f"{scan_id}__mvp_acceptance.json") or read_json(
-        output_dir / "diagnostics" / "mvp_acceptance.json"
-    )
+    acceptance_paths = scan_acceptance_paths(output_dir / "diagnostics", scan_id)
+    acceptance = read_json(acceptance_paths["json"])
     counts = read_db_counts(scan_id, db_path=db_path)
     ensure_scan_has_data(scan_id, counts)
 
@@ -47,7 +47,7 @@ def build_agent_handoff(
             "weekly_brief_json": str(reports_dir / "weekly_brief.json"),
             "weekly_cross_section_md": str(reports_dir / "weekly_cross_section.md"),
             "weekly_cross_section_json": str(reports_dir / "weekly_cross_section.json"),
-            "mvp_acceptance": str(output_dir / "diagnostics" / f"{scan_id}__mvp_acceptance.md"),
+            "mvp_acceptance": str(acceptance_paths["md"]),
         },
         "db_counts": counts,
         "quality": brief.get("quality", {}),

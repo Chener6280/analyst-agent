@@ -15,6 +15,7 @@ def build_project_package(
     output_root: str | Path = "~/macro-strategy",
     db_path: str | Path = "~/macro-strategy/analyst_views.db",
     repo_root: str | Path | None = None,
+    allow_missing_acceptance: bool = False,
 ) -> dict[str, Any]:
     repo_dir = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
     output_dir = Path(output_root).expanduser()
@@ -24,7 +25,16 @@ def build_project_package(
     package_dir.mkdir(parents=True, exist_ok=True)
 
     inputs = read_inputs(scan_id, output_dir, reports_dir)
-    manifest = build_manifest(scan_id, output_dir, reports_dir, package_dir, db_path=Path(db_path).expanduser(), repo_root=repo_dir, inputs=inputs)
+    manifest = build_manifest(
+        scan_id,
+        output_dir,
+        reports_dir,
+        package_dir,
+        db_path=Path(db_path).expanduser(),
+        repo_root=repo_dir,
+        inputs=inputs,
+        allow_missing_acceptance=allow_missing_acceptance,
+    )
 
     report_md = render_markdown_report(manifest, inputs)
     report_html = render_html_report(manifest, inputs)
@@ -95,6 +105,7 @@ def build_manifest(
     db_path: Path,
     repo_root: Path,
     inputs: dict[str, Any],
+    allow_missing_acceptance: bool = False,
 ) -> dict[str, Any]:
     artifacts = {
         "database": str(db_path),
@@ -127,6 +138,7 @@ def build_manifest(
         "acceptance_passed": (inputs.get("acceptance") or {}).get("passed"),
         "engineering_ready": (inputs.get("acceptance") or {}).get("engineering_ready", (inputs.get("acceptance") or {}).get("passed")),
         "production_ready": bool((inputs.get("full_text_recovery") or {}).get("production_ready")),
+        "allow_missing_acceptance": allow_missing_acceptance,
         "agent_handoff_status": (inputs.get("agent_handoff") or {}).get("status"),
         "history_status": (inputs.get("history_readiness") or {}).get("status"),
         "visual_pack_status": (inputs.get("visual_pack") or {}).get("status"),
@@ -157,7 +169,13 @@ def package_status(manifest: dict[str, Any], inputs: dict[str, Any]) -> str:
 
 
 def required_artifact_paths(manifest: dict[str, Any]) -> list[Path]:
-    return [Path(value) for value in (manifest.get("artifacts") or {}).values() if value]
+    paths = []
+    for key, value in (manifest.get("artifacts") or {}).items():
+        if key == "mvp_acceptance" and manifest.get("acceptance_passed") is None and manifest.get("allow_missing_acceptance"):
+            continue
+        if value:
+            paths.append(Path(value))
+    return paths
 
 
 def path_exists(path: str | Path) -> bool:

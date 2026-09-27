@@ -121,6 +121,7 @@ def _run_wechat_accounts(team: dict[str, Any], window: dict[str, Any]) -> dict[s
                 }
             ],
         }
+    base_cmd = _apply_wechat_accounts_override(base_cmd)
     try:
         timeout = _wechat_opencli_timeout()
     except ValueError as exc:
@@ -188,6 +189,25 @@ def _run_wechat_accounts(team: dict[str, Any], window: dict[str, Any]) -> dict[s
             )
 
     return {"hits": hits, "diagnostics": diagnostics}
+
+
+def _apply_wechat_accounts_override(command: list[str]) -> list[str]:
+    accounts_path = os.environ.get("WECHAT_ACCOUNTS_PATH")
+    if not accounts_path:
+        return command
+    cleaned: list[str] = []
+    skip_next = False
+    for part in command:
+        if skip_next:
+            skip_next = False
+            continue
+        if part == "--accounts":
+            skip_next = True
+            continue
+        if part.startswith("--accounts="):
+            continue
+        cleaned.append(part)
+    return [*cleaned, "--accounts", accounts_path]
 
 
 def _validated_wechat_opencli_command(command: str) -> list[str] | None:

@@ -20,6 +20,7 @@ def main() -> int:
         output_root=args.output_root,
         db_path=args.db_path,
         repo_root=REPO_ROOT,
+        allow_missing_acceptance=args.allow_missing_acceptance,
     )
     print(f"project_package={manifest['package_dir']}")
     print(f"json={manifest['package_files']['project_completion_json']}")
@@ -32,6 +33,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--scan-id", required=True)
     parser.add_argument("--output-root", default="~/macro-strategy")
     parser.add_argument("--db-path", default="~/macro-strategy/analyst_views.db")
+    parser.add_argument("--allow-missing-acceptance", action="store_true", help="Allow the pre-acceptance package pass to return review_required before mvp_acceptance exists.")
     return parser.parse_args()
 
 
