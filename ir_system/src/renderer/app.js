@@ -42,7 +42,7 @@ function startClock() {
   const target = document.querySelector("#world-clocks");
   const update = () => {
     const now = new Date();
-    target.innerHTML = [['北京','Asia/Shanghai'],['东京','Asia/Tokyo'],['伦敦','Europe/London'],['纽约','America/New_York'],['洛杉矶','America/Los_Angeles']].map(([name,timeZone])=>{
+    target.innerHTML = [['北京','Asia/Shanghai'],['东京','Asia/Tokyo'],['伦敦','Europe/London'],['洛杉矶','America/Los_Angeles'],['纽约','America/New_York']].map(([name,timeZone])=>{
       const time = new Intl.DateTimeFormat('en-GB',{timeZone,hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(now);
       const date = new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
       return `<div class="session-clock" title="${date} · ${timeZone}"><span>${name}</span><time>${time}</time><small>${date.slice(5)}</small></div>`;
