@@ -24,7 +24,7 @@ const {_electron:electron}=require('playwright-core');
   assert.equal(await page.locator('.dc-heading').count(),0);
   assert.doesNotMatch(await page.locator('#dc-bulk-actions').innerText(),/一次确认|共用归档|不并发/);
   assert.equal(await page.locator('[data-bulk-source]').count(),13);
-  assert.equal(await page.locator('#world-clocks time').count(),4);
+  assert.equal(await page.locator('#world-clocks time').count(),5);
   assert.equal(await page.locator('#connection-status').count(),0);
   for(const id of ['ima','zsxq'])await page.locator(`[data-bulk-source="${id}"]`).check();
   await page.locator('[data-bulk-action="verify"]').click();
