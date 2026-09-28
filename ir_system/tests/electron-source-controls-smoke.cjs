@@ -21,7 +21,7 @@ const {_electron:electron}=require('playwright-core');
   assert.equal(bridge.status,0);assert.ok(JSON.parse(bridge.stdout).result.web,'packaged deterministic browser bridge must resolve its dependencies');
   await app.evaluate(({dialog,clipboard})=>{globalThis.__dialogs=[];globalThis.__copies=[];clipboard.writeText=text=>globalThis.__copies.push(text);dialog.showMessageBox=async(_w,o)=>{globalThis.__dialogs.push(o);return {response:o.message.includes('终端')?1:0};};});
   await page.locator('[data-module="data"]').first().click();await page.locator('#dc-global-dates').waitFor();
-  assert.equal(await page.locator('[data-source-row]').count(),12);assert.equal(await page.locator('[data-source-llm]').count(),12);assert.equal(await page.locator('[data-source-readiness]').count(),12);
+  assert.equal(await page.locator('[data-source-row]').count(),13);assert.equal(await page.locator('[data-source-llm]').count(),13);assert.equal(await page.locator('[data-source-readiness]').count(),13);
   assert.deepEqual(await page.locator('[data-console-tab]').allTextContents(),['任务日志','终端']);
   assert.equal(await page.locator('#console-command, #console-input, #console-settings, [data-console-report], [data-console-explain]').count(),0);
   assert.equal(await page.locator('.dc-log-job').count(),1);assert.doesNotMatch(await page.locator('#console-body').innerText(),/用 Pi 解释报告|旧报告说明/);

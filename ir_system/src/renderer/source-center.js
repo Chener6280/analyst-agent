@@ -175,13 +175,13 @@
     const el = document.querySelector("#sync-center"); if (!el) return;
     try {
       view = await window.irSystem.syncGetState(); if (generation !== current || !el.isConnected) return;
-      el.innerHTML = `<section class="dc-sources"><div class="dc-section-top"><div><span class="dc-section-number">01</span><h2>信源管理</h2><span class="dc-count">${String(sources.length).padStart(2,'0')} SOURCES</span></div><button class="dc-text-button" data-open-budgets>本轮预算与执行设置 ⚙</button></div>
+      el.innerHTML = `<section class="dc-sources"><div class="dc-section-top"><div><span class="dc-section-number">01</span><h2>信源管理</h2><span class="dc-count">${String(sources.length).padStart(2,'0')} SOURCES</span><div id="dc-bulk-actions" class="dc-bulk-actions"></div></div><button class="dc-text-button" data-open-budgets>本轮预算与执行设置 ⚙</button></div>
         <div id="dc-global-dates" class="dc-global-dates"></div><div class="dc-table-wrap"><table class="dc-source-table"><thead><tr><th>信源</th><th>子信源</th><th>信息截止于 / 覆盖</th><th>预分析</th><th>更新操作</th></tr></thead><tbody id="source-rows"></tbody></table></div><div class="dc-table-foot"><span>绿色：环境就绪 · 琥珀色：运行问题 · 下载能力见子信源列表</span><span>历史／最新共用预分析 · 紫色 LLM：AI 待办</span></div></section>
         <div id="sync-message" class="dc-message" role="status" aria-live="polite">选择信源开始。所有下载都需要确认范围；本页没有自动启动任务。</div>
         <section class="dc-console"><div class="dc-console-title"><div><span class="dc-section-number">02</span><h2>Command Window</h2><span class="dc-console-subtitle">采集之后，在这里整理。</span></div><span id="dc-run-state">● 当前空闲</span></div>
         <div class="dc-console-tabs" role="tablist" aria-label="工作窗口"><button data-console-tab="terminal" role="tab" class="active" aria-selected="true">终端</button><button data-console-tab="logs" role="tab" aria-selected="false">任务日志</button><span>下载程序与本地终端相互独立</span></div><div id="console-body" class="dc-console-body" role="tabpanel"></div><div id="terminal-panel" hidden></div></section>
         <dialog id="source-dialog" class="dc-dialog" aria-labelledby="source-dialog-title"></dialog>`;
-      document.querySelector('#dc-global-dates').insertAdjacentHTML('beforebegin','<div id="dc-bulk-actions" class="dc-bulk-actions"></div><div id="dc-audio-activity" class="dc-audio-active" role="status"></div>');
+      document.querySelector('#dc-global-dates').insertAdjacentHTML('beforebegin','<div id="dc-audio-activity" class="dc-audio-active" role="status"></div>');
       renderDates();renderRows(); await window.mountIRTerminals(document.querySelector('#terminal-panel'));renderConsole(); poll(current);pollAudio(current);
     } catch (e) { el.innerHTML = `<p class="dc-message">${esc(friendly(e))}</p>`; }
   };

@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const SOURCES = ['wechat', 'bilibili', 'announcements', 'web', 'news', 'xiaoyuzhou', 'xiaoe'];
+const SOURCES = ['wechat', 'wechat_group', 'bilibili', 'announcements', 'web', 'news', 'xiaoyuzhou', 'xiaoe'];
 const empty = () => ({version: 1, revision: 0, sources: Object.fromEntries(SOURCES.map(id => [id, []]))});
 function entry(value) {
   if (!value || typeof value.name !== 'string' || !value.name.trim() || value.name.length > 300 || /[\x00-\x1f]/.test(value.name)) throw Error('invalid_name');
@@ -14,9 +14,10 @@ function entry(value) {
 }
 function validate(data) {
   if (data?.version !== 1 || !Number.isSafeInteger(data.revision) || data.revision < 0 || !data.sources || Object.keys(data.sources).some(id => !SOURCES.includes(id))) throw Error('invalid_source_lists');
-  // Additive compatibility for existing six-source files; reading never writes
+  // Additive compatibility for older list files; reading never writes
   // or resets the user's lists. Explicitly malformed values still fail closed.
   if (!Object.hasOwn(data.sources, 'xiaoe')) data.sources.xiaoe = [];
+  if (!Object.hasOwn(data.sources, 'wechat_group')) data.sources.wechat_group = [];
   for (const id of SOURCES) {
     const rows = data.sources[id];
     if (!Array.isArray(rows) || rows.length > 10000) throw Error('invalid_source_lists');

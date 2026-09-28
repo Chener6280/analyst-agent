@@ -5,6 +5,7 @@
   {id:'alphapai',name:'阿尔法派',mark:'α',detail:'会议纪要与研究资料',ready:false},
   {id:'gangtise',name:'冈底斯',mark:'G',detail:'研报摘要与机构观点',ready:false},
   {id:'wechat',name:'公众号',mark:'微',detail:'公众号文章',localList:true,unit:'公众号',ready:false},
+  {id:'wechat_group',name:'微信群',mark:'群',detail:'群聊消息与资料',localList:true,unit:'群',ready:false},
   {id:'bilibili',name:'B站',mark:'B',detail:'视频与专栏',localList:true,unit:'账号',ready:false},
   {id:'announcements',name:'公司公告',mark:'公',detail:'公司披露与公告',localList:true,unit:'公司',ready:false},
   {id:'web',name:'网站',mark:'W',detail:'网站与网页',localList:true,unit:'网站',ready:false},

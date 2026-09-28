@@ -13,6 +13,17 @@ test('older six-source lists gain an empty Xiaoe list without changing existing 
  const invalid=s.read();invalid.sources.xiaoe=null;fs.writeFileSync(s.file,JSON.stringify(invalid));
  assert.equal(s.view().status,'error');
 });
+test('older seven-source lists gain an empty WeChat group list without changing existing files',()=>{
+ const dir=fixture(),s=new SourceLists(dir),legacy=s.read();
+ delete legacy.sources.wechat_group;legacy.sources.wechat=[{name:'既有公众号'}];legacy.revision=7;
+ const original=JSON.stringify(legacy);fs.writeFileSync(s.file,original);
+ assert.deepEqual(s.read().sources.wechat_group,[]);assert.equal(fs.readFileSync(s.file,'utf8'),original);
+ assert.equal(s.read().revision,7);
+ main(['add','--data-dir',dir,'--source','wechat_group','--name','示例群','--revision','7']);
+ assert.deepEqual(s.read().sources.wechat,legacy.sources.wechat);assert.equal(s.read().sources.wechat_group.length,1);
+ const invalid=s.read();invalid.sources.wechat_group=null;fs.writeFileSync(s.file,JSON.stringify(invalid));
+ assert.equal(s.view().status,'error');
+});
 test('local lists are independent, versioned, backed up and preserve unrelated sources',()=>{
  const dir=fixture(),s=new SourceLists(dir),args=['--data-dir',dir,'--source','wechat'];
  assert.equal(fs.existsSync(s.file),false);assert.equal(main(['list',...args]).entries.length,0);

@@ -20,6 +20,10 @@
 .dc-section-top, .dc-console-title { display: flex; align-items: center; justify-content: space-between; padding: 10px 17px; gap: 12px; }
 .dc-section-top > div, .dc-console-title > div { display: flex; gap: 12px; align-items: center; }
 .dc-section-top h2, .dc-console-title h2 { font-size: 14px; margin: 0; font-weight: 650; letter-spacing: .01em; }
+.dc-section-top .dc-bulk-actions { flex-wrap: wrap; }
+.dc-section-top .dc-bulk-actions > span { font-size: 14px; color: #b7c5d5; }
+.dc-section-top .dc-bulk-actions .dc-history, .dc-section-top .dc-bulk-actions .dc-latest { font-size: 14px; padding: 3px 11px; }
+.dc-section-top .dc-bulk-actions .dc-llm { margin-left: 0; font-size: 14px; padding: 3px 10px; }
 .dc-section-number { color: #ae7d3d; font: 10px ui-monospace, monospace; padding-right: 11px; border-right: 1px solid #303744; }
 .dc-count { font: 9px ui-monospace, monospace; color: #677688; letter-spacing: .12em; }
 .dc-table-wrap { overflow-x: auto; }

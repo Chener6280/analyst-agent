@@ -16,7 +16,7 @@ const { _electron: electron } = require('playwright-core');
     page.on('pageerror', e => errors.push(e.message));
     await page.locator('[data-module="data"]').first().click();
     await page.getByRole('heading', { name: '信源管理', exact: true }).waitFor();
-    assert.equal(await page.locator('[data-source-row]').count(), 12);
+    assert.equal(await page.locator('[data-source-row]').count(), 13);
     assert.equal(await page.locator('.provider-card').count(), 0);
     assert.equal(await page.locator('text=Demo Provider').count(), 0);
     for (const source of ['alphapai', 'gangtise']) assert.equal(await page.locator(`[data-source-row="${source}"] [data-kind="incremental"]`).isDisabled(), true);

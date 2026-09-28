@@ -10,9 +10,9 @@ const {SourceLists}=require('../adapters/source_lists/store');
   const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.locator('[data-module="data"]').first().click();
   await page.locator('[data-local-list="wechat"]').waitFor();
-  assert.equal(await page.locator('[data-source-row]').count(),12);
-  assert.match(await page.locator('.dc-count').innerText(),/12 SOURCES/);
-  for(const id of ['wechat','bilibili','announcements','web','news','xiaoyuzhou','xiaoe']){
+  assert.equal(await page.locator('[data-source-row]').count(),13);
+  assert.match(await page.locator('.dc-count').innerText(),/13 SOURCES/);
+  for(const id of ['wechat','wechat_group','bilibili','announcements','web','news','xiaoyuzhou','xiaoe']){
    assert.equal(await page.locator(`[data-source-update="${id}"]`).first().isDisabled(),true);
    await page.locator(`[data-local-list="${id}"]`).click();
    assert.match(await page.locator('#source-dialog').innerText(),id==='wechat'?/示例公众号/:/清单为空/);
