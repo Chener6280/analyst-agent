@@ -140,69 +140,7 @@ function workspaceHeading(section, title, mode, asOf) {
 }
 
 function renderOverview(dashboard) {
-  const markets = dashboard.markets || [];
-  const marketMarkup = markets.length
-    ? `<section class="ticker-grid">${markets.map(renderTicker).join("")}</section>`
-    : `<section class="panel empty-panel"><strong>尚未映射实时市场快照</strong><p>数据提供方已经连接，但当前能力目录还不能生成统一的跨资产首页。请在 Data Center 查看各模块覆盖。</p><button class="secondary-button" data-module="data">OPEN DATA CENTER</button></section>`;
-  const pulse = dashboard.pulse || [];
-  const research = dashboard.research || [];
-
-  workspace.innerHTML = `${workspaceHeading("OVERVIEW", "Global Research Monitor", dashboard.dataMode, dashboard.asOf)}
-    ${marketMarkup}
-    <section class="main-grid">
-      <article class="panel">
-        <div class="panel-heading"><div><div class="panel-kicker">ARCHITECTURE</div><h2>Local Research Flow</h2></div><span class="panel-time">PROTOCOL V1</span></div>
-        <div class="system-map">
-          <div class="system-map-step"><small>01</small><strong>Local Sources</strong><span>数据库、文档、研究平台与公开来源</span></div>
-          <div class="system-map-step"><small>02</small><strong>Provider Adapter</strong><span>把外部能力映射到稳定协议</span></div>
-          <div class="system-map-step"><small>03</small><strong>IR System</strong><span>实体、工作区、自选与本地状态</span></div>
-          <div class="system-map-step"><small>04</small><strong>Evidence</strong><span>带时间、来源、覆盖和诊断的结论</span></div>
-        </div>
-      </article>
-      <article class="panel">
-        <div class="panel-heading"><div><div class="panel-kicker">SIGNALS</div><h2>Market Pulse</h2></div><span class="panel-time">${escapeHtml(dashboard.dataMode)}</span></div>
-        ${pulse.length ? `<div class="signal-list">${pulse.map(renderSignal).join("")}</div>` : emptyBody("尚无可比较的跨资产信号", "连接的数据源需要提供经过映射的市场状态指标。")}
-      </article>
-      <article class="panel">
-        <div class="panel-heading"><div><div class="panel-kicker">MODULES</div><h2>Research Surfaces</h2></div></div>
-        <div class="panel-body section-grid">${state.bootstrap.navigation.filter((item) => ["macro","eq","fi","fx","comdty","companies"].includes(item.id)).map((item, index) => renderSection(item, index)).join("")}</div>
-      </article>
-      <article class="panel">
-        <div class="panel-heading"><div><div class="panel-kicker">RESEARCH QUEUE</div><h2>Latest Evidence</h2></div></div>
-        ${research.length ? `<div class="research-list">${research.map(renderResearch).join("")}</div>` : emptyBody("研究队列为空", "后续由 Research Provider 提供资料搜索、阅读与证据状态。")}
-      </article>
-    </section>`;
-}
-
-function renderTicker(item, index) {
-  const isRates = item.market === "RATES";
-  const change = Number(isRates ? item.changeBp : item.changePct) || 0;
-  const direction = change > 0 ? "positive" : change < 0 ? "negative" : "neutral";
-  const sign = change > 0 ? "+" : "";
-  const changeLabel = isRates
-    ? `${sign}${change.toFixed(1)} bp`
-    : `${sign}${change.toFixed(2)}%`;
-  const bars = [34, 47, 39, 58, 52, 71, 64, 78, 69, 86, 75, 92]
-    .map((height, barIndex) => `<span style="height:${direction === "negative" ? 110 - height : height - (index * 2 + barIndex % 3)}%"></span>`).join("");
-  return `<article class="ticker-card">
-    <div class="ticker-meta"><span>${escapeHtml(item.market)}</span><span>${escapeHtml(item.name)}</span></div>
-    <div class="ticker-value">${escapeHtml(item.value)}</div>
-    <div class="ticker-change ${direction}">${escapeHtml(changeLabel)}</div>
-    <div class="sparkline" aria-label="示例趋势">${bars}</div>
-  </article>`;
-}
-
-function renderSignal(item) {
-  const score = Math.max(0, Math.min(100, Number(item.score || 0)));
-  return `<div class="signal-row"><div><span class="signal-name">${escapeHtml(item.label)}</span><span class="signal-note">${escapeHtml(item.detail)}</span></div><div class="meter"><span style="width:${score}%"></span></div><span class="signal-score">${score}</span></div>`;
-}
-
-function renderResearch(item) {
-  return `<div class="research-item"><span class="research-type">${escapeHtml(item.type)}</span><span class="research-copy"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.subtitle)}</small></span><span class="research-time">${escapeHtml(item.time)}</span></div>`;
-}
-
-function renderSection(item, index) {
-  return `<button class="section-card" type="button" data-module="${escapeHtml(item.id)}"><span class="section-number">${String(index + 1).padStart(2,"0")}</span><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(moduleStatus(item.id))} coverage</span></button>`;
+  workspace.innerHTML = workspaceHeading("OVERVIEW", "Global Research Monitor", dashboard.dataMode, dashboard.asOf);
 }
 
 function renderModule(data) {
@@ -210,10 +148,7 @@ function renderModule(data) {
   const sections = definition?.children || data.sections || [];
   const activeChild = sections.find((item) => item.id === state.activeChild);
   const title = activeChild ? `${definition.label} / ${activeChild.label}` : data.title;
-  workspace.innerHTML = `${workspaceHeading(data.moduleId, title, data.dataMode, data.asOf)}
-    <section class="module-intro"><div><div class="panel-kicker">${escapeHtml(definition?.group || "MODULE")}</div><h2>${escapeHtml(title)}</h2><p>${escapeHtml(data.summary)}</p></div>${statusBadge(data.status)}</section>
-    ${sections.length ? `<section class="section-grid">${sections.map((item, index) => `<button class="section-card" type="button" data-child="${escapeHtml(item.id)}" data-parent="${escapeHtml(data.moduleId)}"><span class="section-number">${String(index + 1).padStart(2,"0")}</span><strong>${escapeHtml(item.label)}</strong><span>${item.id === state.activeChild ? "Current view" : "Open workspace"}</span></button>`).join("")}</section>` : `<section class="panel empty-panel"><strong>等待兼容的数据能力</strong><p>该模块已进入平台结构，但当前提供方尚未返回可展示的数据集。应用会保持空状态，不生成替代数字。</p></section>`}
-    ${renderDiagnostics(data.diagnostics)}`;
+  workspace.innerHTML = workspaceHeading(data.moduleId, title, data.dataMode, data.asOf);
 }
 
 async function renderDataCenter() {
@@ -265,28 +200,7 @@ function renderArchiveStatus(data, controls = false) {
 }
 
 async function renderLibrary() {
-  workspace.innerHTML = `${workspaceHeading("RESEARCH", "本地资料库", "local", "OFFLINE SNAPSHOT")}
-    <section class="module-intro"><div><h2>从原件到证据</h2><p>按关键词、公司或行业名称做字面搜索；未进行自动实体识别。日期是来源记录日期，附件继承帖子日期，不推断研报日期。</p></div><button class="secondary-button" data-module="data">资料与采集状态</button></section>
-    <div id="library-main">正在读取本地索引…</div>`;
-  const target = document.querySelector("#library-main");
-  if (!state.bootstrap.providerConfig.archiveRoot) {
-    target.innerHTML = emptyBody("先选择本地归档目录", "进入 Data Center 配置归档目录与 ir_search。资料库不会展示 Demo 资料，也不会自动调用网络信源。");
-    return;
-  }
-  const status = await window.irSystem.archiveRequest("status");
-  archiveState.status = status;
-  if (status.status !== "ready") { target.innerHTML = emptyBody("尚未建立索引", "在 Data Center 点击“更新本地索引”。此操作只创建派生数据，不改写下载原件。"); return; }
-  const filters = { query: archiveState.query, source: archiveState.source, kind: archiveState.kind, offset: archiveState.offset, limit: 30 };
-  if (archiveState.start || archiveState.end) Object.assign(filters, { start: archiveState.start || null, end: archiveState.end || null });
-  const result = await window.irSystem.archiveRequest("search", filters);
-  target.innerHTML = `<form id="archive-search-form" class="archive-search">
-    <div class="field"><label for="archive-query">关键词 / 公司 / 行业</label><input id="archive-query" name="query" value="${escapeHtml(archiveState.query)}" placeholder="如 宏观 / 半导体 / 英伟达" /></div>
-    <div class="field"><label for="archive-source">来源</label><select id="archive-source" name="source"><option value="">全部本地来源</option>${(status.sources || []).map(s => `<option value="${escapeHtml(s.source)}" ${archiveState.source === s.source ? "selected" : ""}>${escapeHtml(s.source)}</option>`).join("")}</select></div>
-    <div class="field"><label for="archive-kind">类型</label><select id="archive-kind" name="kind"><option value="">全部</option><option value="record" ${archiveState.kind === "record" ? "selected" : ""}>主题 / 文章</option><option value="attachment" ${archiveState.kind === "attachment" ? "selected" : ""}>附件</option><option value="audio" ${archiveState.kind === "audio" ? "selected" : ""}>音频</option></select></div>
-    <div class="field"><label for="archive-start">开始日期</label><input id="archive-start" name="start" type="date" value="${escapeHtml(archiveState.start)}" /></div><div class="field"><label for="archive-end">结束日期</label><input id="archive-end" name="end" type="date" value="${escapeHtml(archiveState.end)}" /></div><button class="primary-button">搜索</button>
-    </form><p class="archive-warning">日期筛选须成对填写；筛选时排除未知日期。不筛日期可看到 IMA 等未知日期资料。</p>
-    <div class="archive-toolbar"><span>匹配 ${escapeHtml(result.total)} 条 · 第 ${Math.floor(archiveState.offset/30)+1} 页</span><button class="secondary-button" data-archive-page="prev" ${archiveState.offset ? "" : "disabled"}>上一页</button><button class="secondary-button" data-archive-page="next" ${result.has_more ? "" : "disabled"}>下一页</button></div>
-    <section class="library-grid"><div class="panel archive-results">${result.items.map(r => `<button class="archive-result" data-archive-read="${escapeHtml(r.id)}"><span class="archive-result-meta">${escapeHtml(r.source)} · ${escapeHtml(r.published_on || "日期未知")} · ${r.kind === "attachment" ? "附件" : "主题"}</span><strong>${escapeHtml(r.title)}</strong><span>${escapeHtml(r.snippet || "暂无可索引正文")}</span><small>${escapeHtml(r.text_scope)} / ${escapeHtml(PARSE_LABELS[r.parse_status] || r.parse_status)}</small></button>`).join("") || emptyBody("没有匹配结果", "尝试缩短关键词或取消日期筛选。")}</div><article class="panel archive-reader" id="archive-reader"><div class="empty-panel">选择一条资料阅读。附件原件仅定位，不自动执行文件。</div></article></section>`;
+  workspace.innerHTML = workspaceHeading("RESEARCH", "本地资料库", "local", "OFFLINE SNAPSHOT");
 }
 
 async function readArchiveDocument(id, offset = 0) {
