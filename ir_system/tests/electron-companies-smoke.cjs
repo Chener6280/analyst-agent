@@ -91,7 +91,7 @@ const SECTIONS = ['search', 'financials', 'filings', 'events', 'research'];
     await page.getByRole('tablist', { name: '上市地' }).waitFor();
     assert.equal(await selected(page), 'HK');
 
-    await page.locator('#command-trigger').click();
+    await page.keyboard.press('Meta+k');
     await page.locator('#command-input').fill('美股');
     await page.locator('[data-command-parent="companies"][data-command-child="companies-us"]').click();
     await page.getByRole('tablist', { name: '上市地' }).waitFor();

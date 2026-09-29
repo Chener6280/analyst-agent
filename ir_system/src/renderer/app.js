@@ -448,7 +448,7 @@ document.addEventListener("input", (event) => {
   if (event.target.closest("#archive-search-form")) document.querySelector("#archive-end")?.setCustomValidity("");
 });
 
-document.querySelector("#command-trigger").addEventListener("click", openCommandPalette);
+document.querySelector("#command-trigger")?.addEventListener("click", openCommandPalette);
 commandInput.addEventListener("input", renderCommandResults);
 document.addEventListener("keydown", (event) => {
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
