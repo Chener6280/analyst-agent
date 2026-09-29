@@ -2,6 +2,8 @@ const path = require("node:path");
 const { spawn } = require("node:child_process");
 
 const PROTOCOL = "ir-system-provider/v1";
+// Derivatives requests pull one year of EOD history and calibrate surfaces; they cannot meet the default timeout.
+const LONG_METHODS = new Set(["derivatives.basis", "derivatives.options_catalog", "derivatives.options_surface", "derivatives.options_vix"]);
 
 class SubprocessProvider {
   constructor(config, runtime) {
@@ -27,7 +29,11 @@ class SubprocessProvider {
     if (this.config.irSearchPath) env.IR_SEARCH_PATH = this.config.irSearchPath;
     if (this.config.archiveRoot) env.IR_SEARCH_LOCAL_ARCHIVE_ROOT = this.config.archiveRoot;
     else delete env.IR_SEARCH_LOCAL_ARCHIVE_ROOT;
-    const timeoutMs = method.startsWith("archive.") ? 120000 : Math.max(1000, Math.min(Number(this.config.timeoutMs) || 12000, 120000));
+    if (this.config.cacheDir) env.IR_SYSTEM_DERIVATIVES_CACHE = this.config.cacheDir;
+    else delete env.IR_SYSTEM_DERIVATIVES_CACHE;
+    const timeoutMs = method.startsWith("archive.") ? 120000
+      : LONG_METHODS.has(method) ? 180000
+      : Math.max(1000, Math.min(Number(this.config.timeoutMs) || 12000, 120000));
 
     return new Promise((resolve, reject) => {
       const child = spawn(command, args, { env, stdio: ["pipe", "pipe", "pipe"], detached: process.platform !== "win32" });

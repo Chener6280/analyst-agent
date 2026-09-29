@@ -165,6 +165,19 @@ function registerIpc(configStore) {
     shell.showItemInFolder(target);
     return { status: "revealed" };
   });
+  ipcMain.handle("derivatives:request", async (event, action, params) => {
+    verifyCaller(event);
+    if (typeof action !== "string" || action.length > 40) throw new Error("invalid_action");
+    if (params != null && (typeof params !== "object" || Array.isArray(params))) throw new Error("invalid_params");
+    const clean = {};
+    for (const [key, value] of Object.entries(params || {})) {
+      if (typeof value === "string" && value.length <= 64) clean[key] = value;
+      else if (typeof value === "number" && Number.isFinite(value)) clean[key] = value;
+      else if (value == null) continue;
+      else throw new Error("invalid_params");
+    }
+    return registry.derivatives(action, clean);
+  });
   ipcMain.handle("platform:bootstrap", async () => registry.bootstrap());
   ipcMain.handle("platform:module-data", async (_event, moduleId) => registry.moduleData(moduleId));
   ipcMain.handle("platform:provider-probe", async (_event, providerId) => registry.probe(providerId));
@@ -188,6 +201,7 @@ app.whenReady().then(() => {
     resourcesPath: process.resourcesPath,
     packaged: app.isPackaged,
     nodeExecutable:process.execPath,
+    userData: app.getPath("userData"),
   };
   if(permissionDiagnostic){
     // Isolated, read-only OS checks from a normal LaunchServices launch, not

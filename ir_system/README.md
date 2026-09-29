@@ -8,7 +8,7 @@
 
 - Overview
 - Macro，包括 `Macro → Asset` 与 `Macro → Industry`
-- EQ，包括 A股/港股/美股、股票、Funds & ETFs、Futures & Options
+- EQ：Futures（IH/IF/IC/IM 股指期货基差监控，真实行情，盘中每 5 分钟自动刷新并可手动刷新）与 Options（权益标的 model-free VIX：左表各标的 VIX值/dVIX/分位数，右图 VIX×标的双轴走势与可拖动时间窗口，Wind 日终链本地计算）
 - FI，包括 Rates、Credit、Bonds、Funds & ETFs、Derivatives
 - FX，包括 Spot、Forwards & Swaps、Options、Funds & ETFs
 - COMDTY，包括 Energy、Metals、Agriculture、Funds & ETFs、Derivatives
@@ -38,6 +38,18 @@ Renderer → Preload API → Provider Registry → Subprocess Provider
 ```
 
 只有 `adapters/ir_search_bridge.py` 了解 `ir_search` 的公共 Python API。未来 `ir_search` 发生变化时，优先只修改或替换该适配器；导航、桌面端、本地配置和其他 Provider 不需要跟随重写。
+
+## EQ 衍生品模块
+
+`adapters/ir_derivatives/` 是纯计算包（不导入 ir_search，数据由桥接层注入），向桌面提供三个方法：
+
+- `derivatives.basis`：上证50/沪深300/中证500/中证1000（IH/IF/IC/IM）基差监控，四行布局：左表（代码/点位/涨跌幅/基差/d基差/年化基差率/分位数，首行为指数行情行），右图（当月/下月/当季/下季四条年化基差线 + 标的指数细线右轴，checkbox 开关，默认只显示下季与指数），图下方为全历史双滑块（默认窗口 = 左表「过去 N 年」，可拖动查看更长的上市全历史，手动刷新复位）。指数实时水平用新浪分钟线（AKShare，延迟未核实），期货最新价用 Fiona 快照；取不到时回落到 Wind 日终收盘。历史为全历史（自各品种上市日：IF 2010-04-16、IH/IC 2015-04-16、IM 2022-07-22），EOD 收盘一次性全量回建后长期缓存在 userData/derivatives-cache（basis-eod-v1.json，缓存记录覆盖的品种/指数集合，请求超出即整窗重拉），每次调用只补最近约 10 天尾部；分位数窗口默认过去 3 年（750 个交易日，每个品种 0.5–10 年可调）。每行参数：use 勾选按持有成本调整基差（基差 + 指数×(无风险利率−分红率)×剩余天数/365，即 F*−期货，勾选/取消为前端即时口径切换）；无风险利率默认取 Wind SHIBOR_3M(10) 最新值（3 个月 Shibor 过去 10 个数据平均），分红率默认取 Wind 指数滚动股息率最近可得值，两者可按品种手动覆盖。盘中 09:30–15:10（Asia/Shanghai）每 5 分钟自动刷新并显示时钟与倒计时，其余时间显示已收盘、不自动刷新；手动刷新随时可用；页面折叠或离开后停止计时器。
+- `derivatives.options_vix`：全部 12 个权益类期权标的的 model-free VIX，按标的物分组展示——上证50（510050 沪ETF、000016 中金所HO）、沪深300（510300 沪ETF、159919 深ETF、000300 中金所IO）、中证500（510500、159922）、中证1000（000852 中金所MO）、科创板50（588000 华夏、588080 易方达）、创业板（159915）、深证100（159901）。算法为 CBOE 白皮书方差互换公式：取剩余 ≥8 个自然日的最近两个到期，远期用平价关系（|C−P| 最小行权价），OTM 取价用有成交合约收盘价（Wind 链无买卖盘，替代零买价截断），T₁σ₁²/T₂σ₂² 插值到 30 天 ×100；利率用当日 SHIBOR_3M(10)。有效行权价 <6 的日期留空不编造。历史按标的按日缓存在 userData/derivatives-cache（vix-v1-*.json），**自各品种期权上市日起全量构建**（510050 自 2015-02-09，IO/159919 自 2019-12-23，MO 自 2022-07-22 等）；链按交易所分块拉取（同一交易所的标的共享分块，不重复取数），每次调用最多补 2 个 ≤31 天分块（按交易所轮转），前端自动续建并显示进度；早于各所期权业务开办日（SSE 2015-02-09、SZSE/CFFEX 2019-12-23）的空分块按空值落盘，之后的空分块视为可疑故障不落缓存、下轮重试。环境变量 IR_SYSTEM_VIX_UNDERLYINGS（逗号分隔标的代码）与 IR_SYSTEM_VIX_SINCE（YYYY-MM-DD，构建起点上移）仅供测试/诊断。界面：左侧分组标的列表（组头条加粗合并；数据行 = 代码/名称/VIX值/dVIX/分位数，「过去 N 年」只作用于分位数与 dVIX 统计窗口），右侧主图（左轴 VIX、右轴标的）为全历史 + 下方双滑块窗口刷选（默认窗口 = 过去 N 年贴右缘，拖动后固定，手动刷新复位）。
+- `derivatives.options_catalog` / `derivatives.options_surface`：波动率曲面标定引擎（eSSVI/SVI/去美式化）保留为版本化 API，当前未挂载界面。
+
+时间轴用方差时间 τ：交易日权重 1，非交易日权重 ω_n（由历史收盘对数收益方差回归估计，每日缓存到 userData 下的 derivatives-cache；估计失败时回落 0.1 并标注）。历史链按日缓存；当日数据不缓存。口径与诊断在页面底部逐项列出。
+
+参考：`tests/test_ir_derivatives.py`（纯合成数据单元测试）、`tests/derivatives-plumbing.test.js`（桌面管道）、`tests/electron-derivatives-smoke.cjs`（真实数据桌面冒烟，需本机配置好 ir_search 后运行）。
 
 ## 本机开发
 

@@ -1,0 +1,103 @@
+/* Equities 衍生品面板（基差监控 + 波动率曲面），复用全局 token。 */
+.equities-body { display: block; padding: 10px 12px; }
+.d-body h3 { font-size: 12px; color: #c7d0da; margin: 14px 0 6px; font-weight: 650; }
+.d-statusline { display: flex; align-items: center; gap: 12px; font-size: 11px; color: #c7d0da; flex-wrap: wrap; }
+.d-statusline select, .d-statusline input { background: #0d1219; color: #edf1f5; border: 1px solid #28303b; padding: 3px 6px; font-size: 11px; border-radius: 3px; }
+.d-status { padding: 1px 8px; border-radius: 3px; font-weight: 650; letter-spacing: .06em; }
+.d-status-trading { background: rgba(66, 211, 146, .15); color: #42d392; }
+.d-status-lunch, .d-status-pre_open { background: rgba(255, 158, 27, .15); color: #ff9e1b; }
+.d-status-closed, .d-status-holiday { background: rgba(140, 152, 166, .15); color: #8c98a6; }
+.d-toolbar-inner { display: flex; align-items: center; gap: 6px; margin: 10px 0 6px; flex-wrap: wrap; font-size: 11px; color: #8c98a6; }
+.d-toolbar-inner label { display: flex; align-items: center; gap: 4px; }
+.d-toolbar-inner input { background: #0d1219; color: #edf1f5; border: 1px solid #28303b; padding: 2px 5px; font-size: 11px; border-radius: 3px; }
+.d-chip { background: #0d1219; border: 1px solid #28303b; color: #8c98a6; padding: 3px 10px; font-size: 11px; cursor: pointer; border-radius: 3px; }
+.d-chip:hover { color: #edf1f5; }
+.d-chip.active { border-color: #ff9e1b; color: #ff9e1b; background: rgba(255, 158, 27, .13); }
+.d-table { width: 100%; border-collapse: collapse; font-size: 11px; margin: 4px 0 10px; }
+.d-table th { text-align: right; color: #8c98a6; font-weight: 500; padding: 4px 7px; border-bottom: 1px solid #28303b; white-space: nowrap; }
+.d-table th:first-child, .d-table td:first-child { text-align: left; }
+.d-table td { text-align: right; padding: 3px 7px; border-bottom: 1px solid #1b222c; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.d-table-small td, .d-table-small th { padding: 2px 5px; font-size: 10.5px; }
+.d-index-row td { color: #8c98a6; }
+.d-pos { color: #ff6678; }   /* A股习惯：涨/贴水为红 */
+.d-neg { color: #42d392; }
+.d-muted { color: #8c98a6; }
+.d-empty { color: #8c98a6; font-size: 12px; padding: 18px 4px; }
+.d-foot { color: #677688; font-size: 10.5px; margin: 6px 0 10px; line-height: 1.6; }
+.d-chips { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11px; color: #8c98a6; margin: 6px 0; }
+.d-chips b { color: #edf1f5; font-weight: 600; }
+.d-chart { width: 100%; max-width: 900px; background: #0a0f15; border: 1px solid #1b222c; border-radius: 4px; }
+.d-line { stroke: #ff9e1b; stroke-width: 1.6; fill: none; }
+.d-grid { stroke: #1b222c; stroke-width: 1; }
+.d-axistext { fill: #677688; font-size: 9px; font-family: ui-monospace, monospace; }
+.d-marktext { fill: #8c98a6; font-size: 9px; }
+.d-current { fill: #ff9e1b; }
+.d-mark-lo { fill: #42d392; }
+.d-mark-hi { fill: #ff6678; }
+.d-dot-used { fill: #65a8ff; }
+.d-dot-skip { fill: #3a4553; }
+.d-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 10px; margin-top: 8px; }
+.d-card { border: 1px solid #252e39; background: #0d1219; border-radius: 4px; padding: 10px 12px; }
+.d-card-title { font-size: 11px; color: #8c98a6; }
+.d-card-tip { font-size: 10.5px; color: #677688; margin-top: 2px; }
+.d-card-value { font-size: 24px; font-weight: 650; margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+.d-card-delta { font-size: 11px; font-weight: 400; margin-left: 8px; }
+.d-card-sub { font-size: 10.5px; color: #677688; }
+.d-bar { position: relative; height: 6px; border-radius: 3px; margin: 10px 0 6px;
+  background: linear-gradient(90deg, #42d392 0%, #65a8ff 45%, #65a8ff 55%, #ff6678 100%); opacity: .55; }
+.d-bar-mean { position: absolute; top: -2px; width: 2px; height: 10px; background: #edf1f5; }
+.d-bar-cur { position: absolute; top: -4px; width: 8px; height: 14px; border-radius: 4px; background: #ff9e1b; border: 1px solid #07090c; transform: translateX(-4px); }
+.d-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 10px; font-size: 10.5px; color: #8c98a6; }
+.d-card-grid b { color: #edf1f5; }
+.d-slice { border: 1px solid #202a36; border-radius: 4px; margin: 6px 0; }
+.d-slice > summary { cursor: pointer; padding: 6px 10px; font-size: 11px; color: #c7d0da; list-style: none; }
+.d-slice > summary::-webkit-details-marker { display: none; }
+.d-slice > summary:hover { background: #101720; }
+.d-slice[open] > summary { border-bottom: 1px solid #1b222c; }
+.d-slice .d-chart { margin: 8px 10px 0; }
+.d-slice .d-table { margin: 8px 0 4px; }
+.d-notes { margin-top: 10px; font-size: 10.5px; color: #8c98a6; }
+.d-notes summary { cursor: pointer; color: #677688; }
+.d-notes ul { margin: 6px 0; padding-left: 18px; line-height: 1.7; }
+/* Futures 四行布局：左表右图 */
+.d-futrow { display: grid; grid-template-columns: minmax(360px, 5fr) 7fr; gap: 6px 16px; margin: 12px 0 22px; align-items: start; }
+.d-futrow-head { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 10px; font-size: 12px; color: #c7d0da; flex-wrap: wrap; }
+.d-futrow-head b { color: #edf1f5; font-size: 13px; }
+.d-table-fut { margin: 0; }
+.d-futright .d-chart { max-width: none; }
+.d-slotbar { display: flex; align-items: center; gap: 12px; margin-top: 4px; font-size: 10.5px; color: #8c98a6; flex-wrap: wrap; }
+.d-slotcb { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.d-slotcb input { accent-color: #ff9e1b; margin: 0; }
+.d-sw { display: inline-block; width: 12px; height: 3px; border-radius: 2px; }
+path.d-c0 { stroke: #ff9e1b; } .d-sw.d-c0 { background: #ff9e1b; }
+path.d-c1 { stroke: #65a8ff; } .d-sw.d-c1 { background: #65a8ff; }
+path.d-c2 { stroke: #42d392; } .d-sw.d-c2 { background: #42d392; }
+path.d-c3 { stroke: #ff6678; } .d-sw.d-c3 { background: #ff6678; }
+.d-line-idx { stroke: #98a4b5; stroke-width: 1; fill: none; opacity: .75; }
+.d-sw-idx { background: #98a4b5; height: 2px; }
+.d-legend-idx { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; }
+.d-zero { stroke: #3a4553; stroke-width: 1; }
+.d-axistext-idx { fill: #98a4b5; }
+.d-parambar { margin-top: 8px; }
+.d-parambar input[type="checkbox"] { accent-color: #ff9e1b; }
+.d-param { display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; color: #8c98a6; font-weight: 400; }
+.d-param input[type="number"] { background: #0d1219; color: #edf1f5; border: 1px solid #28303b; padding: 2px 4px; font-size: 10.5px; border-radius: 3px; }
+.d-param input[type="checkbox"] { accent-color: #ff9e1b; margin: 0; }
+/* VIX 面板：左表右图 + 可拖动时间窗口 */
+.d-vixwrap { display: grid; grid-template-columns: minmax(300px, 4fr) 7fr; gap: 18px; margin-top: 10px; align-items: start; }
+.d-vixhead { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; font-size: 11px; color: #8c98a6; }
+.d-vix-title { font-size: 14px; color: #edf1f5; }
+.d-vixright select { background: #0d1219; color: #edf1f5; border: 1px solid #28303b; padding: 3px 6px; font-size: 11px; border-radius: 3px; }
+.d-vixright .d-chart { max-width: none; }
+[data-vix-row] { cursor: pointer; }
+[data-vix-row]:hover td { background: #101720; }
+.d-row-active td { background: rgba(255, 158, 27, .08); }
+.d-vixgroup td { text-align: left; font-weight: 650; color: #edf1f5; background: #101720; padding: 4px 7px; border-bottom: 1px solid #28303b; }
+[data-vix-brush] { margin-top: 6px; cursor: grab; }
+[data-fut-brush] { margin-top: 4px; cursor: grab; }
+.d-brush-hint { font-size: 10px; margin: 3px 0 2px; }
+.d-brush-svg { width: 100%; background: #0a0f15; border: 1px solid #1b222c; border-radius: 4px; touch-action: none; }
+.d-brush-line { stroke: #ff9e1b; stroke-width: 1.2; opacity: .8; }
+.d-brush-dim { fill: rgba(10, 15, 21, .72); }
+.d-brush-win { fill: rgba(255, 158, 27, .10); stroke: rgba(255, 158, 27, .45); stroke-width: 1; }
+.d-brush-handle { fill: #ff9e1b; cursor: ew-resize; }

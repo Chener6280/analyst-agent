@@ -12,7 +12,7 @@ import json
 import os
 import sys
 import traceback
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any
 
 PROTOCOL = "ir-system-provider/v1"
@@ -170,12 +170,111 @@ def _capabilities() -> dict[str, Any]:
     }
 
 
+DERIVATIVES_METHODS = {"derivatives.basis", "derivatives.options_catalog", "derivatives.options_surface", "derivatives.options_vix"}
+
+
+def _derivatives_fetch():
+    """ir_search access for ir_derivatives; one registry per process, cursor paging to completion.
+
+    返回 {records, diagnostics, status, truncated, failed}：
+    - truncated：行级截断——游标 12 页预算耗尽仍有剩余，或续页因无显式 provider 被拒。
+      注意 ir_search 的 incomplete_page 覆盖「页满待续」和「页含 UPSTREAM_SCHEMA 诊断（如部分
+      标的无行）」两种情况，不能等同截断；中间页满页噪音不上报。
+    - failed：运营性失败（网络/超时/预算/凭证/配额等 failure_kind，或页状态 error/unavailable）。
+      UPSTREAM_SCHEMA 与 NONE 属内容信息（如上市前合约无行），不算失败。
+    消费方据 truncated/failed 决定可否落缓存；status 保留最差页状态用于诊断展示。"""
+    _bootstrap_import_path()
+    from ir_search import DataRequest, get_data
+    from ir_search.context import RequestContext
+    from ir_search.models import FailureKind
+    from ir_search.registry import build_data_registry
+
+    registry = build_data_registry()
+    CONTENT_KINDS = {FailureKind.NONE, FailureKind.UPSTREAM_SCHEMA}
+    SEVERITY = {"ok": 0, "partial": 1, "unavailable": 2, "error": 3}
+
+    def fetch(dataset, symbols, start, end, *, market, provider=None, frequency=None, adjustment=None):
+        records, diagnostics, cursor = [], [], None
+        worst, truncated, failed = "ok", False, False
+        for _ in range(12):
+            result = get_data(
+                DataRequest(dataset, symbols=list(symbols), start=start, end=end, market=market, frequency=frequency,
+                            adjustment=adjustment, provider=provider, limit=5000, cursor=cursor),
+                registry=registry, context=RequestContext(timeout_seconds=60, max_operations=40))
+            records.extend(result.records)
+            page_codes = [d.code for d in result.diagnostics]
+            diagnostics.extend(page_codes)
+            if "pagination_requires_explicit_provider" in page_codes:
+                truncated = True  # 请求了续页但被拒：此前各页必然不完整
+            if any(d.failure_kind not in CONTENT_KINDS for d in result.diagnostics):
+                failed = True
+            page_status = result.status.value
+            if page_status in ("error", "unavailable"):
+                failed = True
+            if SEVERITY.get(page_status, 3) > SEVERITY[worst]:
+                worst = page_status
+            cursor = result.next_cursor
+            if not cursor:
+                break
+        else:
+            truncated = True  # 页预算耗尽仍有余页
+        if truncated and worst == "ok":
+            worst = "partial"
+        return {"records": records, "diagnostics": sorted(set(diagnostics)), "status": worst,
+                "truncated": truncated, "failed": failed}
+
+    return fetch
+
+
+def _derivatives(method: str, params: dict[str, Any]) -> dict[str, Any]:
+    here = os.path.dirname(os.path.abspath(__file__))
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    from ir_derivatives import service
+
+    allowed = {
+        "derivatives.basis": {"years"} | {f"{k}_{p}" for k in ("rf", "div", "years") for p in ("IH", "IF", "IC", "IM")},
+        "derivatives.options_catalog": {"exchange", "date"},
+        "derivatives.options_surface": {"exchange", "product", "date", "rate"},
+        "derivatives.options_vix": {"years"},
+    }[method]
+    if set(params) - allowed:
+        raise ValueError("Unsupported derivatives parameter")
+    cache = os.environ.get("IR_SYSTEM_DERIVATIVES_CACHE", "").strip() or None
+    ctx = service.Context(_derivatives_fetch(), cache_dir=cache)
+    if method == "derivatives.basis":
+        # 每个品种可用 rf_<P>/div_<P>/years_<P> 覆盖；缺省 = Shibor3M(10) / Wind 指数股息率 / 全局 years。
+        overrides = {}
+        for p in ("IH", "IF", "IC", "IM"):
+            ov = {k: params[f"{k}_{p}"] for k in ("rf", "div", "years") if params.get(f"{k}_{p}") is not None}
+            if ov:
+                overrides[p] = ov
+        return service.basis_monitor(ctx, years=params.get("years", 3.0), overrides=overrides)
+    if method == "derivatives.options_catalog":
+        return service.options_catalog(ctx, str(params.get("exchange") or ""), params.get("date"))
+    if method == "derivatives.options_vix":
+        # IR_SYSTEM_VIX_UNDERLYINGS（逗号分隔标的代码）与 IR_SYSTEM_VIX_SINCE（YYYY-MM-DD，构建起点上移）
+        # 是测试/诊断钩子：限定 VIX 构建范围，生产界面不传，默认全历史（自各品种上市日）全标的。
+        sel = os.environ.get("IR_SYSTEM_VIX_UNDERLYINGS", "").strip()
+        picked = [s.strip() for s in sel.split(",") if s.strip()] or None
+        since_raw = os.environ.get("IR_SYSTEM_VIX_SINCE", "").strip()
+        since = date.fromisoformat(since_raw) if since_raw else None
+        return service.options_vix(ctx, years=params.get("years", 3.0), underlyings=picked, since=since)
+    return service.options_surface(ctx, str(params.get("exchange") or ""), str(params.get("product") or ""),
+                                   params.get("date"), params.get("rate", 0.015))
+
+
 def handle(request: dict[str, Any]) -> dict[str, Any]:
     if request.get("protocol") != PROTOCOL:
         raise ValueError("provider protocol mismatch")
     method = request.get("method")
     if method == "system.capabilities":
         return _capabilities()
+    if method in DERIVATIVES_METHODS:
+        params = request.get("params") or {}
+        if not isinstance(params, dict):
+            raise ValueError("Invalid derivatives parameters")
+        return _derivatives(method, params)
     if method in {"archive.status", "archive.index", "archive.search", "archive.read", "archive.parse", "archive.asset", "archive.audio_list"}:
         _bootstrap_import_path()
         import ir_search

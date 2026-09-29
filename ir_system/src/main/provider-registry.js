@@ -1,3 +1,4 @@
+const path = require("node:path");
 const { DemoProvider } = require("./providers/demo-provider");
 const { SubprocessProvider } = require("./providers/subprocess-provider");
 const { NAVIGATION } = require("./navigation");
@@ -10,9 +11,11 @@ class ProviderRegistry {
 
   reload(config) {
     this.config = config;
+    const irSearchConfig = { ...(config.providers?.ir_search || {}) };
+    if (this.runtime?.userData) irSearchConfig.cacheDir = path.join(this.runtime.userData, "derivatives-cache");
     this.providers = new Map([
       ["demo", new DemoProvider()],
-      ["ir_search", new SubprocessProvider(config.providers?.ir_search, this.runtime)],
+      ["ir_search", new SubprocessProvider(irSearchConfig, this.runtime)],
     ]);
   }
 
@@ -57,6 +60,11 @@ class ProviderRegistry {
     if (!["status", "index", "search", "read", "parse", "asset", "audio_list"].includes(action)) throw new Error("Unknown archive action");
     if (!this.config.providers?.ir_search?.archiveRoot) throw new Error("请先在 Data Center 设置本地归档目录");
     return this.providers.get("ir_search").request(`archive.${action}`, params);
+  }
+
+  async derivatives(action, params = {}) {
+    if (!["basis", "options_catalog", "options_surface", "options_vix"].includes(action)) throw new Error("Unknown derivatives action");
+    return this.providers.get("ir_search").request(`derivatives.${action}`, params);
   }
 }
 

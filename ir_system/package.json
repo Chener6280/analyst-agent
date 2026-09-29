@@ -13,7 +13,7 @@
     "dev": "electron .",
     "zsxq-web": "node adapters/zsxq_web/cli.js",
     "test": "node --test tests/*.test.js",
-    "check": "node --check src/main/index.js && node --check src/main/provider-registry.js && node --check src/main/providers/demo-provider.js && node --check src/main/providers/subprocess-provider.js && node --check src/preload/index.js && node --check src/renderer/app.js && node --check src/renderer/source-center.js && node --check src/renderer/companies.js && node --check adapters/zsxq_web/cli.js && node --check adapters/zsxq_web/core.js && node --check adapters/zsxq_web/browser.js && node --check adapters/zsxq_web/archive.js && npm test",
+    "check": "node --check src/main/index.js && node --check src/main/provider-registry.js && node --check src/main/providers/demo-provider.js && node --check src/main/providers/subprocess-provider.js && node --check src/preload/index.js && node --check src/renderer/app.js && node --check src/renderer/source-center.js && node --check src/renderer/companies.js && node --check src/renderer/equities.js && node --check adapters/zsxq_web/cli.js && node --check adapters/zsxq_web/core.js && node --check adapters/zsxq_web/browser.js && node --check adapters/zsxq_web/archive.js && npm test",
     "test:sync-ui": "node tests/electron-source-controls-smoke.cjs",
     "test:pi-offline": "node tests/pi-offline-smoke.cjs",
     "pack": "electron-builder --dir --publish never",

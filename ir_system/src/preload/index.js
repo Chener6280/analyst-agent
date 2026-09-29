@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld("irSystem", {
   selectProvider: (providerId) => ipcRenderer.invoke("platform:select-provider", providerId),
   saveProviderConfig: (input) => ipcRenderer.invoke("platform:provider-config", input),
   archiveRequest: (action, params) => ipcRenderer.invoke("archive:request", action, params),
+  derivativesRequest: (action, params) => ipcRenderer.invoke("derivatives:request", action, params),
   revealArchiveAsset: (id) => ipcRenderer.invoke("archive:reveal", id),
   syncGetState: () => ipcRenderer.invoke("sync:state"),
   syncCheckLocal: (force=false) => ipcRenderer.invoke('sync:check-local',force),
