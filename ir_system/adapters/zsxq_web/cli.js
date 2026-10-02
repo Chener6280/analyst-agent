@@ -79,6 +79,7 @@ function usage() {
 function archiveOptions(values) {
   return {
     headed: Boolean(values.headed),
+    isolateItemFailures: Boolean(values["isolate-item-failures"]),
     profileDir: values["profile-dir"],
     chromePath: values["chrome-path"],
     maxScrolls: numberValue(values, "max-scrolls", 120),
