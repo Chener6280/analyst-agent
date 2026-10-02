@@ -124,6 +124,11 @@ async function discoverTopics(page, job, options = {}) {
   const collect = (response) => {
     const url = new URL(response.url());
     if (url.hostname !== "api.zsxq.com" || url.pathname !== `/v2/groups/${job.group_id}/topics`) return;
+    // Tab capability probes (scope=digests/with_files/... with count=1) can return
+    // zero rows even when the scope=all feed has plenty of history left; only the
+    // scope=all feed is pagination evidence, so never let a probe mark exhaustion.
+    const scope = url.searchParams.get("scope");
+    if (scope && scope !== "all") return;
     const task = (async () => {
       if (response.status() === 429) throw new ZsxqWebError("rate_limited", "Website rate limit; stop and cool down", 14);
       const rows = parseBrowserFeed(await response.text(), job.group_id);

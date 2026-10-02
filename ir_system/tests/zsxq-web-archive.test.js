@@ -157,3 +157,32 @@ test("attachment progress survives a later file failure and retry reuses verifie
   assert.equal(resumed.all_discovered_processed, true);
   assert.deepEqual(resumed.failures, {});
 });
+
+test("empty tab-capability probes never end scope=all feed discovery", async () => {
+  const { discoverTopics } = require("../adapters/zsxq_web/archive");
+  const job = { job_id: "feed-job", group_id: "123", start: "2015-01-01", end: "2026-10-02",
+    include: { topics: "metadata_only", attachments: false }, membership: { active: true } };
+  const feed = (scope, rows) => ({
+    url: () => `https://api.zsxq.com/v2/groups/123/topics?scope=${scope}&count=${scope === "all" ? 20 : 1}`,
+    status: () => 200,
+    text: async () => JSON.stringify({ succeeded: true, resp_data: { topics: rows.map(row => ({ topic_id: row[0], create_time: `${row[1]}T12:00:00.000+0800`, talk: { text: "fixture" } })) } }),
+  });
+  const handlers = [];
+  let wheels = 0, page2Sent = false;
+  const locator = () => ({ first: () => ({ waitFor: async () => {} }), innerText: async () => "知识星球 所有星球", evaluate: async () => "", count: async () => 5 });
+  const page = {
+    url: () => "https://wx.zsxq.com/group/123",
+    title: async () => "知识星球",
+    waitForLoadState: async () => {}, waitForTimeout: async () => {}, locator,
+    on: (event, cb) => { if (event === "response") handlers.push(cb); }, off: () => {},
+    goto: async () => { for (const cb of handlers) cb(feed("all", [["111", "2026-09-20"], ["112", "2026-09-14"]])); for (const probe of ["digests", "with_files", "with_images", "questions"]) for (const cb of handlers) cb(feed(probe, [])); },
+    mouse: { move: async () => {}, wheel: async () => { wheels += 1; if (wheels === 5 && !page2Sent) { page2Sent = true; for (const cb of handlers) cb(feed("all", [["211", "2019-05-01"], ["212", "2016-01-01"]])); } } },
+  };
+  const result = await discoverTopics(page, job, { scrollDelayMs: 0, maxScrolls: 12 });
+  // A zero-row digests/with_files probe must not mark the feed exhausted;
+  // deeper scope=all pages keep extending discovery until the date floor.
+  assert.equal(result.discovery_exhausted, false);
+  assert.equal(result.topics.length, 4);
+  assert.equal(result.oldest_visible_date, "2016-01-01");
+  assert.equal(result.reached_date_floor, false);
+});
